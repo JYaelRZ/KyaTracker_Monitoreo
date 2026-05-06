@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KyaTracker — Monitoreo y Custodia Digital</title>
+    <meta name="description" content="Dashboard de monitoreo logístico digital - KyaTracker">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- ═══════ SIDEBAR ═══════ -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>🛰️ KyaTracker</h2>
+                <span class="badge">Monitoreo</span>
+            </div>
+
+            <div class="sidebar-menu">
+                <div class="menu-item active" id="btnHome" onclick="clearClientSelection()"
+                    style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin: 0 12px 16px; background: rgba(59,130,246,0.1); border-radius: 8px; cursor: pointer; border: 1px solid rgba(59,130,246,0.2); transition: all 0.2s;">
+                    <span style="font-size: 18px;">🏠</span>
+                    <span style="font-weight: 600; color: var(--accent-blue);">Resumen General</span>
+                </div>
+
+                <div class="sidebar-title">
+                    <span>CLIENTES</span>
+                    <span class="badge" id="clientCount">0</span>
+                </div>
+                <!-- Search bar for clients -->
+                <div class="sidebar-search">
+                    <span>🔍</span>
+                    <input type="text" id="clientSearchInput" placeholder="Buscar cliente..." oninput="filterClients()">
+                </div>
+                <div class="client-list" id="clientList">
+                    <!-- Dynamic client items -->
+                </div>
+                <div class="sidebar-footer">
+                    <button class="btn-new-service" onclick="openModal()">＋ Nuevo Servicio</button>
+                </div>
+        </aside>
+
+        <!-- ═══════ MAIN ═══════ -->
+        <main class="main-content">
+            <div class="main-header">
+                <h2 id="clientTitle">Bienvenido a <span>KyaTracker</span></h2>
+                <div class="header-actions">
+                    <button class="btn btn-export" onclick="openInvoiceModal()" title="Factura Global">🧾
+                        Factura</button>
+                    <button class="btn btn-export" onclick="exportCSV()" title="Exportar CSV">📥 CSV</button>
+                    <button class="btn-icon" onclick="loadClients()" title="Actualizar">🔄</button>
+                </div>
+            </div>
+
+            <div id="welcomeScreen" class="welcome-screen" style="display:none;"></div>
+
+            <!-- Global Dashboard -->
+            <div id="globalDashboard" style="display: block; margin-top: 20px;">
+                <div
+                    style="background: var(--bg-card); padding: 30px; border-radius: 16px; border: 1px solid var(--border-color); text-align: left; margin-bottom: 24px;">
+                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
+                        <div
+                            style="font-size: 32px; background: rgba(59,130,246,0.1); padding: 16px; border-radius: 12px; border: 1px solid rgba(59,130,246,0.2);">
+                            📈</div>
+                        <div>
+                            <h2 style="font-size: 24px; margin: 0; color: var(--text-primary);">Resumen General de
+                                Operaciones</h2>
+                            <p style="margin: 4px 0 0; color: var(--text-secondary); font-size: 14px;">Métricas
+                                consolidadas de todos los clientes activos.</p>
+                        </div>
+                    </div>
+                    <div class="stats-grid" style="margin-top: 24px;">
+                        <div class="stat-card">
+                            <div class="stat-label">Ingresos Totales</div>
+                            <div class="stat-value" id="globalRevenue" style="color: var(--accent-blue);">$0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Clientes Activos</div>
+                            <div class="stat-value" id="globalClients">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Servicios Totales</div>
+                            <div class="stat-value"><span id="globalActive" style="color:var(--accent-green);">0</span>
+                                <span style="font-size:14px;color:var(--text-muted);font-weight:400;">en ruta</span>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Top Cliente (Rutas)</div>
+                            <div class="stat-value" id="globalTopClient"
+                                style="font-size: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+                                title="">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr; gap: 24px;">
+                    <div class="chart-card">
+                        <h3>🏆 Top 5 Clientes por Ingresos</h3>
+                        <div class="chart-container" id="globalTopClientsChartWrapper" style="height: 250px;">
+                            <canvas id="globalTopClientsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Content (hidden initially) -->
+            <div id="dashboardContent" style="display:none;">
+                <!-- Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Servicios</div>
+                        <div class="stat-value" id="statServices">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">En Ruta</div>
+                        <div class="stat-value" id="statActive">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Ingresos</div>
+                        <div class="stat-value" id="statRevenue">$0.00</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Minutos Facturados</div>
+                        <div class="stat-value" id="statMinutes">0</div>
+                    </div>
+                </div>
+
+                <!-- Mexico Map -->
+                <div class="map-section">
+                    <div class="map-header">
+                        <h3>🗺️ Mapa de Rutas Activas</h3>
+                        <div class="map-toolbar">
+                            <div class="map-filters">
+                                <button class="map-filter-btn active" data-filter="all"
+                                    onclick="filterMapRoutes('all')">Todas</button>
+                                <button class="map-filter-btn" data-filter="active"
+                                    onclick="filterMapRoutes('active')">🟢 En Ruta</button>
+                                <button class="map-filter-btn" data-filter="completed"
+                                    onclick="filterMapRoutes('completed')">✅ Completadas</button>
+                                <input type="date" id="mapDateFilter" class="map-date-filter" onchange="applyMapVisibility()" title="Filtrar por fecha específica">
+                            </div>
+                            <div class="map-zoom-controls">
+                                <button class="map-zoom-btn" onclick="zoomMap(1.3)" title="Acercar">＋</button>
+                                <button class="map-zoom-btn" onclick="zoomMap(0.77)" title="Alejar">－</button>
+                                <button class="map-zoom-btn" onclick="resetMapZoom()" title="Restablecer">⟲</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="map-container" id="mapContainer">
+                        <svg id="mexicoMap" viewBox="0 0 900 520" preserveAspectRatio="xMidYMid meet"></svg>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="charts-row">
+                    <div class="chart-card">
+                        <h3><span class="dot green"></span> Destinos Más Visitados</h3>
+                        <div class="chart-wrapper" id="topChartWrapper">
+                            <canvas id="topChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <h3><span class="dot red"></span> Destinos Menos Visitados</h3>
+                        <div class="chart-wrapper" id="bottomChartWrapper">
+                            <canvas id="bottomChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Services Table -->
+                <div class="table-section">
+                    <div class="table-header">
+                        <h3>📋 Servicios del Cliente</h3>
+                        <div class="search-box">
+                            <span>🔍</span>
+                            <input type="text" id="searchInput" placeholder="Buscar..." oninput="filterTable()">
+                        </div>
+                    </div>
+                    <div style="overflow-x: auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Unidad</th>
+                                    <th>Operador</th>
+                                    <th>Origen</th>
+                                    <th>Destino</th>
+                                    <th>Salida</th>
+                                    <th>Llegada</th>
+                                    <th>Mins</th>
+                                    <th>Costo</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="servicesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ═══════ MODAL ═══════ -->
+    <div class="modal-overlay" id="serviceModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">Nuevo Servicio</h3>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="serviceForm" onsubmit="event.preventDefault(); saveService();">
+                    <input type="hidden" id="editingId">
+                    <div class="form-group">
+                        <label>Unidad / Vehículo</label>
+                        <input type="text" id="fUnit" placeholder="Ej. Tracto 01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Operador</label>
+                        <input type="text" id="fOperator" placeholder="Nombre del operador" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Cliente</label>
+                        <input type="text" id="fClient" placeholder="Nombre del cliente" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Origen</label>
+                        <input type="text" id="fOrigin" placeholder="Dirección/Lugar de inicio" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Destino</label>
+                        <input type="text" id="fDestination" placeholder="Dirección/Lugar de llegada" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Tarifa por Hora ($)</label>
+                        <input type="number" step="0.01" id="fRate" placeholder="Ej. 250.00" required>
+                    </div>
+
+                    <!-- Hora de Salida - Manual con AM/PM -->
+                    <div class="form-group">
+                        <label>🕐 Hora de Salida</label>
+                        <div class="time-row">
+                            <input type="text" id="fStartDate" placeholder="DD/MM/YYYY">
+                            <select id="fStartHour">
+                                <option value="">HH</option>
+                                <option>01</option>
+                                <option>02</option>
+                                <option>03</option>
+                                <option>04</option>
+                                <option>05</option>
+                                <option>06</option>
+                                <option>07</option>
+                                <option>08</option>
+                                <option>09</option>
+                                <option>10</option>
+                                <option>11</option>
+                                <option>12</option>
+                            </select>
+                            <select id="fStartMinute">
+                                <option value="">MM</option>
+                                <option>00</option>
+                                <option>05</option>
+                                <option>10</option>
+                                <option>15</option>
+                                <option>20</option>
+                                <option>25</option>
+                                <option>30</option>
+                                <option>35</option>
+                                <option>40</option>
+                                <option>45</option>
+                                <option>50</option>
+                                <option>55</option>
+                            </select>
+                            <select id="fStartAmpm">
+                                <option>AM</option>
+                                <option>PM</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Hora de Llegada - Manual con AM/PM -->
+                    <div class="form-group">
+                        <label>🏁 Hora de Llegada (opcional)</label>
+                        <div class="time-row">
+                            <input type="text" id="fEndDate" placeholder="DD/MM/YYYY">
+                            <select id="fEndHour">
+                                <option value="">HH</option>
+                                <option>01</option>
+                                <option>02</option>
+                                <option>03</option>
+                                <option>04</option>
+                                <option>05</option>
+                                <option>06</option>
+                                <option>07</option>
+                                <option>08</option>
+                                <option>09</option>
+                                <option>10</option>
+                                <option>11</option>
+                                <option>12</option>
+                            </select>
+                            <select id="fEndMinute">
+                                <option value="">MM</option>
+                                <option>00</option>
+                                <option>05</option>
+                                <option>10</option>
+                                <option>15</option>
+                                <option>20</option>
+                                <option>25</option>
+                                <option>30</option>
+                                <option>35</option>
+                                <option>40</option>
+                                <option>45</option>
+                                <option>50</option>
+                                <option>55</option>
+                            </select>
+                            <select id="fEndAmpm">
+                                <option>AM</option>
+                                <option>PM</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Estado Financiero</label>
+                        <select id="fStatus">
+                            <option>En proceso de facturación</option>
+                            <option>Facturado</option>
+                            <option>Facturado y pagado</option>
+                            <option>Pagado</option>
+                            <option>Pendiente</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveService()">💾 Guardar Servicio</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Filter Modal -->
+    <div class="modal-overlay" id="invoiceModal">
+        <div class="modal" style="width:480px;">
+            <div class="modal-header">
+                <h3>🧾 Generar Factura Global</h3>
+                <button class="modal-close" onclick="closeInvoiceModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <p style="color:var(--text-secondary);margin-bottom:16px;">Genera un ticket consolidado con todas las
+                    rutas finalizadas de este cliente en un periodo.</p>
+                <div class="form-row" style="display:flex;gap:16px;margin-bottom:16px;">
+                    <div class="form-group" style="flex:1;"><label>Desde (Opcional)</label><input type="date"
+                            id="invStartDate"></div>
+                    <div class="form-group" style="flex:1;"><label>Hasta (Opcional)</label><input type="date"
+                            id="invEndDate"></div>
+                </div>
+                <div class="form-group">
+                    <label>Porcentaje de IVA (%)</label>
+                    <input type="number" id="invIva" value="16" min="0" step="1">
+                    <small style="color:var(--text-muted);font-size:10px;">Pon 0 si no deseas aplicar IVA.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeInvoiceModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="generateInvoice()">💾 Generar Factura</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Route tooltip -->
+    <div class="route-tooltip" id="routeTooltip"></div>
+
+    <script src="/static/js/mexico_map.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>
