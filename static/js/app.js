@@ -68,7 +68,9 @@ function renderClientList(clients){
         const col=colors[i%colors.length],act=currentClient===c.name?'active':'';
         const div=document.createElement('div');div.className=`client-item ${act}`;
         div.onclick=()=>{currentClient=c.name;selectClient(c.name);};
-        div.innerHTML=`<div class="client-avatar" style="background:${col}20;color:${col};border:1px solid ${col}40;">${ini}</div><div class="client-info"><h4>${c.name}</h4><p>${c.services} servicios · ${c.active} activos</p></div>`;
+        const inactiveStyle = c.is_active === false ? 'opacity: 0.5; filter: grayscale(1);' : '';
+        const nameText = c.is_active === false ? `🚫 ${c.name}` : c.name;
+        div.innerHTML=`<div class="client-avatar" style="background:${col}20;color:${col};border:1px solid ${col}40; ${inactiveStyle}">${ini}</div><div class="client-info" style="${inactiveStyle}"><h4>${nameText}</h4><p>${c.services} servicios · ${c.active} activos</p></div>`;
         list.appendChild(div);
     });
 }
@@ -76,7 +78,7 @@ function renderClientList(clients){
 async function selectClient(name){
     currentClient=name;
     document.querySelectorAll('.client-item').forEach(el=>el.classList.remove('active'));
-    document.querySelectorAll('.client-item').forEach(el=>{if(el.querySelector('h4')?.textContent===name)el.classList.add('active');});
+    document.querySelectorAll('.client-item').forEach(el=>{if(el.querySelector('h4')?.textContent.includes(name))el.classList.add('active');});
     
     const btnHome = document.getElementById('btnHome');
     if(btnHome) btnHome.classList.remove('active');
@@ -87,6 +89,21 @@ async function selectClient(name){
     if(globalDash) globalDash.style.display='none';
     
     document.getElementById('dashboardContent').style.display='block';
+    
+    const clientData = allClients.find(c => c.name === name);
+    const dropdown = document.getElementById('clientActionsDropdown');
+    const menuBtn = document.getElementById('btnToggleStatus');
+    if(dropdown) dropdown.style.display = 'block';
+    if(menuBtn && clientData) {
+        if(clientData.is_active === false) {
+            menuBtn.innerHTML = '✅ Activar';
+            menuBtn.onclick = activateClient;
+        } else {
+            menuBtn.innerHTML = '🚫 Inactivar';
+            menuBtn.onclick = inactivateClient;
+        }
+    }
+
     await Promise.all([loadClientStats(name),loadClientServices(name)]);
 }
 
@@ -103,6 +120,9 @@ function clearClientSelection() {
     if(globalDash) globalDash.style.display='block';
     
     document.getElementById('dashboardContent').style.display='none';
+    const dropdown = document.getElementById('clientActionsDropdown');
+    if(dropdown) dropdown.style.display = 'none';
+    
     loadGlobalStats();
 }
 
@@ -486,10 +506,25 @@ async function inactivateClient() {
             body: JSON.stringify({action: 'inactivate'})
         });
         showToast('Cliente inactivado');
-        clearClientSelection();
         loadClients();
+        selectClient(currentClient); // Refresh dropdown UI
     } catch(e) {
         showToast('Error al inactivar cliente', 'error');
+    }
+}
+
+async function activateClient() {
+    try {
+        await fetch(`/api/clients/${encodeURIComponent(currentClient)}/status`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'activate'})
+        });
+        showToast('Cliente activado');
+        loadClients();
+        selectClient(currentClient); // Refresh dropdown UI
+    } catch(e) {
+        showToast('Error al activar cliente', 'error');
     }
 }
 

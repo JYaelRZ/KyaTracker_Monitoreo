@@ -119,8 +119,6 @@ def all_stats():
     with SessionLocal() as db:
         inactive = [c[0] for c in db.query(ClientStatus.client).filter(ClientStatus.is_active == False).all()]
         q = db.query(MonitoringService)
-        if inactive:
-            q = q.filter(MonitoringService.client.notin_(inactive))
             
         if month_str:
             try:
@@ -151,6 +149,7 @@ def all_stats():
         for name, data in clients.items():
             data['name'] = name
             data['revenue'] = round(data['revenue'], 2)
+            data['is_active'] = name not in inactive
             result.append(data)
         return jsonify(sorted(result, key=lambda x: x['name']))
 
@@ -533,6 +532,13 @@ def update_client_status(client_name):
                 db.add(cs)
             else:
                 cs.is_active = False
+        elif action == 'activate':
+            cs = db.query(ClientStatus).filter(ClientStatus.client == client_name).first()
+            if cs:
+                cs.is_active = True
+            else:
+                cs = ClientStatus(client=client_name, is_active=True)
+                db.add(cs)
         db.commit()
         return jsonify({'message': 'Ok'})
 
