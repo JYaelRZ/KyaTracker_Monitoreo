@@ -47,11 +47,19 @@
         <main class="main-content">
             <div class="main-header">
                 <h2 id="clientTitle">Bienvenido a <span>KyaTracker</span></h2>
-                <div class="header-actions">
+                <div class="header-actions" style="display:flex; gap:12px; align-items:center;">
+                    <input type="month" id="globalMonthFilter" class="month-filter" onchange="applyGlobalMonthFilter()" title="Filtrar por mes">
                     <button class="btn btn-export" onclick="openInvoiceModal()" title="Factura Global">🧾
                         Factura</button>
                     <button class="btn btn-export" onclick="exportCSV()" title="Exportar CSV">📥 CSV</button>
                     <button class="btn-icon" onclick="loadClients()" title="Actualizar">🔄</button>
+                    <div class="dropdown" id="clientActionsDropdown" style="display:none; position:relative;">
+                        <button class="btn-icon" onclick="toggleClientActions()" title="Opciones de Cliente">⚙️</button>
+                        <div id="clientActionsMenu" class="dropdown-menu">
+                            <button onclick="inactivateClient()" class="dropdown-item">🚫 Inactivar</button>
+                            <button onclick="deleteClient()" class="dropdown-item delete">🗑️ Eliminar</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -172,8 +180,16 @@
 
                 <!-- Services Table -->
                 <div class="table-section">
-                    <div class="table-header">
+                    <div class="table-header" style="flex-wrap: wrap; gap:10px;">
                         <h3>📋 Servicios del Cliente</h3>
+                        <div class="status-filters" style="display:flex; gap:8px; overflow-x:auto;">
+                            <button class="map-filter-btn active" data-status="all" onclick="filterTableByStatus('all')">Todos</button>
+                            <button class="map-filter-btn" data-status="Pagado" onclick="filterTableByStatus('Pagado')">Pagado</button>
+                            <button class="map-filter-btn" data-status="Facturado y pagado" onclick="filterTableByStatus('Facturado y pagado')">Facturado y pagado</button>
+                            <button class="map-filter-btn" data-status="Facturado" onclick="filterTableByStatus('Facturado')">Facturado</button>
+                            <button class="map-filter-btn" data-status="En proceso de facturación" onclick="filterTableByStatus('En proceso de facturación')">En proceso</button>
+                            <button class="map-filter-btn" data-status="Pendiente" onclick="filterTableByStatus('Pendiente')">Pendiente</button>
+                        </div>
                         <div class="search-box">
                             <span>🔍</span>
                             <input type="text" id="searchInput" placeholder="Buscar..." oninput="filterTable()">
@@ -366,6 +382,42 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeInvoiceModal()">Cancelar</button>
                 <button class="btn btn-primary" onclick="generateInvoice()">💾 Generar Factura</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Time Modal -->
+    <div class="modal-overlay" id="quickTimeModal">
+        <div class="modal" style="width: 400px;">
+            <div class="modal-header">
+                <h3 id="quickTimeTitle">Registrar Tiempo</h3>
+                <button class="modal-close" onclick="closeQuickTimeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Fecha y Hora</label>
+                    <div class="time-row">
+                        <input type="text" id="qtDate" placeholder="DD/MM/YYYY">
+                        <select id="qtHour">
+                            <option value="">HH</option>
+                            <option>01</option><option>02</option><option>03</option><option>04</option><option>05</option><option>06</option>
+                            <option>07</option><option>08</option><option>09</option><option>10</option><option>11</option><option>12</option>
+                        </select>
+                        <select id="qtMinute">
+                            <option value="">MM</option>
+                            <option>00</option><option>05</option><option>10</option><option>15</option><option>20</option><option>25</option>
+                            <option>30</option><option>35</option><option>40</option><option>45</option><option>50</option><option>55</option>
+                        </select>
+                        <select id="qtAmpm">
+                            <option>AM</option>
+                            <option>PM</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeQuickTimeModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveQuickTime()">💾 Guardar</button>
             </div>
         </div>
     </div>

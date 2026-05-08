@@ -5,7 +5,8 @@ import os, uuid, datetime, json, csv, io
 from flask import Flask, render_template, request, jsonify, send_file, Response
 from sqlalchemy import func
 from database.connection import SessionLocal
-from database.models import MonitoringService
+from database.models import MonitoringService, ClientStatus
+from datetime import timezone
 from utils.exporter import export_data_to_excel_file
 from utils.ticket_generator import generate_monitoring_ticket_pdf
 from utils.invoice_generator import generate_consolidated_invoice
@@ -25,10 +26,22 @@ def get_clients():
 @app.route('/api/services', methods=['GET'])
 def get_services():
     client = request.args.get('client', '')
+    month_str = request.args.get('month')
     with SessionLocal() as db:
         q = db.query(MonitoringService).order_by(MonitoringService.created_at.desc())
         if client:
             q = q.filter(MonitoringService.client == client)
+        if month_str:
+            try:
+                y, m = map(int, month_str.split('-'))
+                start_dt = datetime.datetime(y, m, 1, tzinfo=timezone.utc)
+                if m == 12:
+                    end_dt = datetime.datetime(y+1, 1, 1, tzinfo=timezone.utc)
+                else:
+                    end_dt = datetime.datetime(y, m+1, 1, tzinfo=timezone.utc)
+                q = q.filter(MonitoringService.start_time >= start_dt, MonitoringService.start_time < end_dt)
+            except:
+                pass
         services = q.all()
         result = []
         for s in services:
@@ -51,10 +64,22 @@ def get_services():
 @app.route('/api/client_stats', methods=['GET'])
 def client_stats():
     client = request.args.get('client', '')
+    month_str = request.args.get('month')
     with SessionLocal() as db:
         q = db.query(MonitoringService)
         if client:
             q = q.filter(MonitoringService.client == client)
+        if month_str:
+            try:
+                y, m = map(int, month_str.split('-'))
+                start_dt = datetime.datetime(y, m, 1, tzinfo=timezone.utc)
+                if m == 12:
+                    end_dt = datetime.datetime(y+1, 1, 1, tzinfo=timezone.utc)
+                else:
+                    end_dt = datetime.datetime(y, m+1, 1, tzinfo=timezone.utc)
+                q = q.filter(MonitoringService.start_time >= start_dt, MonitoringService.start_time < end_dt)
+            except:
+                pass
         services = q.all()
 
         # Destination frequency
@@ -90,8 +115,26 @@ def client_stats():
 @app.route('/api/all_stats', methods=['GET'])
 def all_stats():
     """Stats summary for each client"""
+    month_str = request.args.get('month') # YYYY-MM
     with SessionLocal() as db:
-        services = db.query(MonitoringService).all()
+        inactive = [c[0] for c in db.query(ClientStatus.client).filter(ClientStatus.is_active == False).all()]
+        q = db.query(MonitoringService)
+        if inactive:
+            q = q.filter(MonitoringService.client.notin_(inactive))
+            
+        if month_str:
+            try:
+                y, m = map(int, month_str.split('-'))
+                start_dt = datetime.datetime(y, m, 1, tzinfo=timezone.utc)
+                if m == 12:
+                    end_dt = datetime.datetime(y+1, 1, 1, tzinfo=timezone.utc)
+                else:
+                    end_dt = datetime.datetime(y, m+1, 1, tzinfo=timezone.utc)
+                q = q.filter(MonitoringService.start_time >= start_dt, MonitoringService.start_time < end_dt)
+            except:
+                pass
+                
+        services = q.all()
         clients = {}
         for s in services:
             if s.client not in clients:
@@ -114,8 +157,26 @@ def all_stats():
 @app.route('/api/global_stats', methods=['GET'])
 def global_stats():
     """Global overview statistics for the main dashboard"""
+    month_str = request.args.get('month') # YYYY-MM
     with SessionLocal() as db:
-        services = db.query(MonitoringService).all()
+        inactive = [c[0] for c in db.query(ClientStatus.client).filter(ClientStatus.is_active == False).all()]
+        q = db.query(MonitoringService)
+        if inactive:
+            q = q.filter(MonitoringService.client.notin_(inactive))
+            
+        if month_str:
+            try:
+                y, m = map(int, month_str.split('-'))
+                start_dt = datetime.datetime(y, m, 1, tzinfo=timezone.utc)
+                if m == 12:
+                    end_dt = datetime.datetime(y+1, 1, 1, tzinfo=timezone.utc)
+                else:
+                    end_dt = datetime.datetime(y, m+1, 1, tzinfo=timezone.utc)
+                q = q.filter(MonitoringService.start_time >= start_dt, MonitoringService.start_time < end_dt)
+            except:
+                pass
+                
+        services = q.all()
         
         total_revenue = sum(s.total_cost for s in services if s.total_cost)
         total_active = sum(1 for s in services if not s.arrival_time)
@@ -430,6 +491,49 @@ def invoice_blob():
         finally:
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
+
+@app.route('/api/services/<service_id>/quick_action', methods=['PUT'])
+def quick_action(service_id):
+    action = request.json.get('action')
+    value = request.json.get('value')
+    with SessionLocal() as db:
+        s = db.query(MonitoringService).filter(MonitoringService.id == service_id).first()
+        if not s:
+            return jsonify({'error': 'No encontrado'}), 404
+        
+        now = datetime.datetime.now(timezone.utc)
+        if action == 'start':
+            if value:
+                s.start_time = datetime.datetime.strptime(value, '%d/%m/%Y %I:%M %p').replace(tzinfo=timezone.utc)
+            else:
+                s.start_time = now
+        elif action == 'arrive':
+            if value:
+                s.arrival_time = datetime.datetime.strptime(value, '%d/%m/%Y %I:%M %p').replace(tzinfo=timezone.utc)
+            else:
+                s.arrival_time = now
+        elif action == 'status':
+            s.financial_status = value
+            
+        db.commit()
+        return jsonify({'message': 'Actualizado'})
+
+@app.route('/api/clients/<client_name>/status', methods=['PUT'])
+def update_client_status(client_name):
+    action = request.json.get('action') # 'inactivate', 'delete'
+    with SessionLocal() as db:
+        if action == 'delete':
+            db.query(MonitoringService).filter(MonitoringService.client == client_name).delete()
+            db.query(ClientStatus).filter(ClientStatus.client == client_name).delete()
+        elif action == 'inactivate':
+            cs = db.query(ClientStatus).filter(ClientStatus.client == client_name).first()
+            if not cs:
+                cs = ClientStatus(client=client_name, is_active=False)
+                db.add(cs)
+            else:
+                cs.is_active = False
+        db.commit()
+        return jsonify({'message': 'Ok'})
 
 if __name__ == '__main__':
     from database.setup_db import init_db

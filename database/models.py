@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, Integer, DateTime
+from sqlalchemy import Column, String, Float, Integer, DateTime, Boolean
 from datetime import datetime, timezone
 from database.connection import Base
 
@@ -26,3 +26,10 @@ class MonitoringService(Base):
     total_cost = Column(Float, nullable=True)
     
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+class ClientStatus(Base):
+    """Modelo para estado de clientes (Activo/Inactivo)"""
+    __tablename__ = "client_statuses"
+    
+    client = Column(String(150), primary_key=True)
+    is_active = Column(Boolean, default=True)

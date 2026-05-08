@@ -7,7 +7,9 @@ function showToast(m,t='success'){const c=document.getElementById('toastContaine
 
 async function loadClients(){
     try{
-        const r=await fetch('/api/all_stats'),d=await r.json();
+        const month = document.getElementById('globalMonthFilter')?.value || '';
+        const url = month ? `/api/all_stats?month=${month}` : '/api/all_stats';
+        const r=await fetch(url),d=await r.json();
         allClients=d;renderClientList(d);
         document.getElementById('clientCount').textContent=d.length;
         if(!currentClient) loadGlobalStats();
@@ -16,7 +18,9 @@ async function loadClients(){
 
 async function loadGlobalStats() {
     try {
-        const r = await fetch('/api/global_stats'), d = await r.json();
+        const month = document.getElementById('globalMonthFilter')?.value || '';
+        const url = month ? `/api/global_stats?month=${month}` : '/api/global_stats';
+        const r = await fetch(url), d = await r.json();
         document.getElementById('globalRevenue').textContent = `$${d.total_revenue.toLocaleString('es-MX', {minimumFractionDigits:2})}`;
         document.getElementById('globalClients').textContent = d.total_clients;
         document.getElementById('globalActive').textContent = d.total_active;
@@ -102,7 +106,11 @@ function clearClientSelection() {
 }
 
 async function loadClientStats(name){
-    try{const r=await fetch(`/api/client_stats?client=${encodeURIComponent(name)}`),d=await r.json();
+    try{
+        const month = document.getElementById('globalMonthFilter')?.value || '';
+        let url = `/api/client_stats?client=${encodeURIComponent(name)}`;
+        if(month) url += `&month=${month}`;
+        const r=await fetch(url),d=await r.json();
     document.getElementById('statServices').textContent=d.total_services;
     document.getElementById('statActive').textContent=d.active;
     document.getElementById('statRevenue').textContent=`$${d.total_revenue.toLocaleString('es-MX',{minimumFractionDigits:2})}`;
@@ -142,7 +150,13 @@ function renderCharts(destinations){
 }
 
 async function loadClientServices(name){
-    try{const r=await fetch(`/api/services?client=${encodeURIComponent(name)}`),d=await r.json();allServices=d;renderServicesTable(d);selectedRouteId=null;currentMapFilter='all';updateFilterButtons();renderMexicoMap(document.getElementById('mexicoMap'),d);resetMapZoom();}catch(e){console.error(e);}
+    try{
+        const month = document.getElementById('globalMonthFilter')?.value || '';
+        let url = `/api/services?client=${encodeURIComponent(name)}`;
+        if(month) url += `&month=${month}`;
+        const r=await fetch(url),d=await r.json();
+        allServices=d;renderServicesTable(d);selectedRouteId=null;currentMapFilter='all';updateFilterButtons();renderMexicoMap(document.getElementById('mexicoMap'),d);resetMapZoom();
+    }catch(e){console.error(e);}
 }
 
 function renderServicesTable(services){
@@ -156,8 +170,25 @@ function renderServicesTable(services){
             const h=Math.floor(s.billed_minutes/60), m=Math.floor(s.billed_minutes%60);
             mins = h>0 ? `${h}h ${m}m` : `${m}m`;
         }
+        const statusOpts = ['En proceso de facturación', 'Facturado', 'Facturado y pagado', 'Pagado', 'Pendiente'];
+        let statusSelect = `<select onchange="updateServiceStatus('${s.id}', this.value, this)" style="padding:4px; border-radius:4px; font-size:12px; background:var(--bg-card); color:var(--text-primary); border:1px solid var(--border-color);">`;
+        statusOpts.forEach(opt => {
+            statusSelect += `<option value="${opt}" ${s.financial_status === opt ? 'selected' : ''}>${opt}</option>`;
+        });
+        statusSelect += `</select>`;
+
         const tr=document.createElement('tr');
-        tr.innerHTML=`<td>${s.unit}</td><td>${s.operator}</td><td>${s.origin}</td><td>${s.destination}</td><td>${s.start_time}</td><td>${s.arrival_time||'<span class="status-badge active">En Ruta</span>'}</td><td>${mins}</td><td>${cost}</td><td><span class="status-badge ${sc}">${st}</span></td><td><div class="row-actions"><button onclick="editService('${s.id}')" title="Editar">✏️</button><button onclick="openSaveDialog('ticket','${s.id}','${s.unit}')" title="Ticket" ${!s.arrival_time?'disabled style="opacity:0.3"':''}>📄</button><button class="delete" onclick="deleteService('${s.id}')" title="Eliminar">🗑️</button></div></td>`;
+        tr.dataset.status = (s.financial_status || '').trim(); // for filtering
+        tr.innerHTML=`<td>${s.unit}</td><td>${s.operator}</td><td>${s.origin}</td><td>${s.destination}</td>
+        <td>
+            ${s.start_time}
+            <button onclick="openQuickTimeModal('${s.id}', 'start')" title="Registrar Salida" style="background:none;border:none;cursor:pointer;font-size:12px;">🕒</button>
+        </td>
+        <td>
+            ${s.arrival_time||'<span class="status-badge active">En Ruta</span>'}
+            ${!s.arrival_time ? `<button onclick="openQuickTimeModal('${s.id}', 'arrive')" title="Registrar Llegada" style="background:none;border:none;cursor:pointer;font-size:12px;">🏁</button>` : ''}
+        </td>
+        <td>${mins}</td><td>${cost}</td><td>${statusSelect}</td><td><div class="row-actions"><button onclick="editService('${s.id}')" title="Editar">✏️</button><button onclick="openSaveDialog('ticket','${s.id}','${s.unit}')" title="Ticket" ${!s.arrival_time?'disabled style="opacity:0.3"':''}>📄</button><button class="delete" onclick="deleteService('${s.id}')" title="Eliminar">🗑️</button></div></td>`;
         tbody.appendChild(tr);
     });
 }
@@ -201,9 +232,8 @@ function applyMapVisibility(){
             }
         }
         
-        g.style.opacity=visible?'1':'0.06';
-        g.style.pointerEvents=visible?'auto':'none';
-        g.style.transition='opacity 0.4s ease';
+        g.style.display = visible ? '' : 'none';
+        g.style.pointerEvents = visible ? 'auto' : 'none';
     });
 }
 
@@ -256,7 +286,22 @@ function onMapBackgroundClick(e){
     }
 }
 
-function filterTable(){const q=document.getElementById('searchInput').value.toLowerCase();document.querySelectorAll('#servicesBody tr').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(q)?'':'none';});}
+function filterTable(){
+    const q=document.getElementById('searchInput').value.toLowerCase();
+    const currentStatus = document.querySelector('.status-filters .active')?.dataset.status || 'all';
+    document.querySelectorAll('#servicesBody tr').forEach(r=>{
+        const matchesQuery = r.textContent.toLowerCase().includes(q);
+        const rowStatus = (r.dataset.status || '').trim();
+        const matchesStatus = currentStatus === 'all' || rowStatus === currentStatus;
+        r.style.display = (matchesQuery && matchesStatus) ? '' : 'none';
+    });
+}
+
+function filterTableByStatus(status) {
+    document.querySelectorAll('.status-filters button').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.status-filters button[data-status="${status}"]`)?.classList.add('active');
+    filterTable();
+}
 
 function openModal(editData=null){
     document.getElementById('serviceModal').classList.add('show');
@@ -407,5 +452,139 @@ async function generateInvoice(){
             showToast('Error al guardar', 'error');
             console.error(err);
         }
+    }
+}
+// ═══════ NUEVAS FUNCIONES ═══════
+function applyGlobalMonthFilter() {
+    loadClients();
+    if(currentClient) {
+        loadClientStats(currentClient);
+        loadClientServices(currentClient);
+    }
+}
+
+function toggleClientActions() {
+    const menu = document.getElementById('clientActionsMenu');
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+document.addEventListener('click', e => {
+    const dropdown = document.getElementById('clientActionsDropdown');
+    const menu = document.getElementById('clientActionsMenu');
+    if (dropdown && menu && !dropdown.contains(e.target)) {
+        menu.style.display = 'none';
+    }
+});
+
+async function inactivateClient() {
+    if(!confirm('¿Estás seguro de que deseas inactivar este cliente? Sus datos no se mostrarán en los reportes globales.')) return;
+    try {
+        await fetch(`/api/clients/${encodeURIComponent(currentClient)}/status`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'inactivate'})
+        });
+        showToast('Cliente inactivado');
+        clearClientSelection();
+        loadClients();
+    } catch(e) {
+        showToast('Error al inactivar cliente', 'error');
+    }
+}
+
+async function deleteClient() {
+    if(!confirm('¿Estás seguro de que deseas ELIMINAR este cliente y todos sus servicios? Esta acción no se puede deshacer.')) return;
+    try {
+        await fetch(`/api/clients/${encodeURIComponent(currentClient)}/status`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'delete'})
+        });
+        showToast('Cliente eliminado');
+        clearClientSelection();
+        loadClients();
+    } catch(e) {
+        showToast('Error al eliminar cliente', 'error');
+    }
+}
+
+let currentQuickAction = null;
+let currentQuickServiceId = null;
+
+function openQuickTimeModal(serviceId, actionStr) {
+    currentQuickServiceId = serviceId;
+    currentQuickAction = actionStr;
+    const isStart = actionStr === 'start';
+    document.getElementById('quickTimeTitle').textContent = isStart ? 'Registrar Salida' : 'Registrar Llegada';
+    
+    // Set to current time
+    const now = new Date();
+    document.getElementById('qtDate').value = now.toLocaleDateString('es-MX', {day:'2-digit',month:'2-digit',year:'numeric'});
+    let h = now.getHours();
+    const m = Math.floor(now.getMinutes()/5)*5;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    h = h ? h : 12;
+    document.getElementById('qtHour').value = h.toString().padStart(2, '0');
+    document.getElementById('qtMinute').value = m.toString().padStart(2, '0');
+    document.getElementById('qtAmpm').value = ampm;
+    
+    document.getElementById('quickTimeModal').classList.add('show');
+}
+
+function closeQuickTimeModal() {
+    document.getElementById('quickTimeModal').classList.remove('show');
+}
+
+async function saveQuickTime() {
+    const d = document.getElementById('qtDate').value;
+    const h = document.getElementById('qtHour').value;
+    const m = document.getElementById('qtMinute').value;
+    const ampm = document.getElementById('qtAmpm').value;
+    if(!d || !h || !m) { showToast('Completa la fecha y hora', 'error'); return; }
+    
+    const valueStr = `${d} ${h}:${m} ${ampm}`;
+    try {
+        const res = await fetch(`/api/services/${currentQuickServiceId}/quick_action`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: currentQuickAction, value: valueStr})
+        });
+        if(res.ok) {
+            showToast('Actualizado');
+            closeQuickTimeModal();
+            if(currentClient) {
+                loadClientStats(currentClient);
+                loadClientServices(currentClient);
+            }
+        } else {
+            showToast('Error', 'error');
+        }
+    } catch(e) {
+        showToast('Error de red', 'error');
+    }
+}
+
+async function updateServiceStatus(serviceId, status, selectEl) {
+    try {
+        const res = await fetch(`/api/services/${serviceId}/quick_action`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({action: 'status', value: status})
+        });
+        if(res.ok) {
+            showToast('Estado actualizado');
+            if(selectEl) {
+                const tr = selectEl.closest('tr');
+                if(tr) {
+                    tr.dataset.status = status;
+                    filterTable();
+                }
+            }
+        } else {
+            showToast('Error', 'error');
+        }
+    } catch(e) {
+        showToast('Error de red', 'error');
     }
 }
