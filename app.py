@@ -167,23 +167,26 @@ def create_service():
         except ValueError as e:
             return jsonify({'error': f'Formato de fecha/hora llegada inválido: {e}'}), 400
 
-    with SessionLocal() as db:
-        s = MonitoringService(
-            id=str(uuid.uuid4()),
-            unit=data['unit'],
-            operator=data['operator'],
-            client=data['client'],
-            origin=data['origin'],
-            destination=data['destination'],
-            start_time=start_dt,
-            arrival_time=arrival_dt,
-            hourly_rate=float(data['hourly_rate']),
-            financial_status=data.get('financial_status', 'En proceso de facturación')
-        )
-        db.add(s)
-        db.commit()
-        db.refresh(s)
-        return jsonify({'id': s.id, 'message': 'Servicio registrado correctamente'}), 201
+    try:
+        with SessionLocal() as db:
+            s = MonitoringService(
+                id=str(uuid.uuid4()),
+                unit=data['unit'],
+                operator=data['operator'],
+                client=data['client'],
+                origin=data['origin'],
+                destination=data['destination'],
+                start_time=start_dt,
+                arrival_time=arrival_dt,
+                hourly_rate=float(data['hourly_rate']),
+                financial_status=data.get('financial_status', 'En proceso de facturación')
+            )
+            db.add(s)
+            db.commit()
+            db.refresh(s)
+            return jsonify({'id': s.id, 'message': 'Servicio registrado correctamente'}), 201
+    except Exception as e:
+        return jsonify({'error': f'ERROR REAL: {str(e)}'}), 500
 
 @app.route('/api/services/<service_id>', methods=['PUT'])
 def update_service(service_id):
