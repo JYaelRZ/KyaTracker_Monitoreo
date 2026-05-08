@@ -5,7 +5,7 @@ from sqlalchemy.pool import NullPool
 
 # Supabase direct connection string provided by the user
 # Database connection URL from environment variable or fallback (using port 6543 for Vercel/Serverless)
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres.antefwqlngmqtavaamxz:Kyatracker8050@aws-0-us-east-1.pooler.supabase.com:6543/postgres")
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres.antefwqlngmqtavaamxz:Kyatracker8050@aws-1-us-east-1.pooler.supabase.com:6543/postgres")
 
 # Crear el engine – NullPool is required for serverless (Vercel) since
 # persistent connection pools cannot be maintained across invocations.
