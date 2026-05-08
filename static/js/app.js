@@ -23,9 +23,10 @@ async function loadGlobalStats() {
         const r = await fetch(url), d = await r.json();
         document.getElementById('globalRevenue').textContent = `$${d.total_revenue.toLocaleString('es-MX', {minimumFractionDigits:2})}`;
         document.getElementById('globalClients').textContent = d.total_clients;
+        document.getElementById('globalTotalServices').textContent = d.total_services;
         document.getElementById('globalActive').textContent = d.total_active;
-        document.getElementById('globalTopClient').textContent = d.top_active_client;
-        document.getElementById('globalTopClient').title = `${d.top_active_count} rutas activas`;
+        document.getElementById('globalTopClient').textContent = d.top_client;
+        document.getElementById('globalTopClient').title = `${d.top_client_count} rutas en total`;
 
         if (globalChart) globalChart.destroy();
         const ctx = document.getElementById('globalTopClientsChart').getContext('2d');

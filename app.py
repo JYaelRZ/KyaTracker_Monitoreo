@@ -193,7 +193,7 @@ def global_stats():
             if not s.arrival_time:
                 client_stats[c]['active'] += 1
                 
-        top_active_client = max(client_stats.items(), key=lambda x: x[1]['active'], default=None)
+        top_client = max(client_stats.items(), key=lambda x: x[1]['total'], default=None)
         
         top_revenue_clients = sorted(
             [{'name': k, 'revenue': v['revenue']} for k, v in client_stats.items()],
@@ -203,10 +203,11 @@ def global_stats():
         return jsonify({
             'total_clients': len(client_stats),
             'total_revenue': total_revenue,
+            'total_services': len(services),
             'total_active': total_active,
             'total_completed': total_completed,
-            'top_active_client': top_active_client[0] if top_active_client and top_active_client[1]['active'] > 0 else 'Ninguno',
-            'top_active_count': top_active_client[1]['active'] if top_active_client else 0,
+            'top_client': top_client[0] if top_client and top_client[1]['total'] > 0 else 'Ninguno',
+            'top_client_count': top_client[1]['total'] if top_client else 0,
             'top_revenue_clients': top_revenue_clients
         })
 
