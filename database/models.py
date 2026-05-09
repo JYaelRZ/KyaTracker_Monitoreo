@@ -1,5 +1,6 @@
 from sqlalchemy import Column, String, Float, Integer, DateTime, Boolean
 from datetime import datetime, timezone
+import uuid
 from database.connection import Base
 
 class MonitoringService(Base):
@@ -33,3 +34,15 @@ class ClientStatus(Base):
     
     client = Column(String(150), primary_key=True)
     is_active = Column(Boolean, default=True)
+
+class User(Base):
+    """Modelo para usuarios del sistema"""
+    __tablename__ = "users"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    email = Column(String(150), unique=True, nullable=False)
+    password = Column(String(255), nullable=False)
+    role = Column(String(50), default="normal") # 'admin' o 'normal'
+    permissions = Column(String(255), default="[]") # JSON list of permissions
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+

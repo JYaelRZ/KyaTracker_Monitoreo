@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - KyaTracker</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: #0A0F1E;
+            color: #fff;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .login-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Left Side */
+        .left-side {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 40px 80px;
+            max-width: 50%;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .header svg {
+            width: 24px;
+            height: 24px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+
+        .form-wrapper {
+            margin: auto;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .form-wrapper h1 {
+            font-size: 32px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .form-wrapper p {
+            color: #64748B;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+
+        .google-btn {
+            width: 100%;
+            padding: 12px;
+            background: transparent;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: 0.2s;
+        }
+        
+        .google-btn:hover {
+            background: #1E293B;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: #64748B;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #1E293B;
+        }
+
+        .divider:not(:empty)::before { margin-right: .25em; }
+        .divider:not(:empty)::after { margin-left: .25em; }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 14px 16px;
+            background: transparent;
+            border: 1px solid #1E293B;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            border-color: #3B82F6;
+        }
+
+        .input-group input::placeholder {
+            color: #64748B;
+        }
+
+        .options {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+            font-size: 12px;
+            color: #94A3B8;
+        }
+
+        .options input[type="checkbox"] {
+            margin-right: 8px;
+            accent-color: #3B82F6;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%);
+            border: none;
+            border-radius: 24px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-bottom: 20px;
+        }
+
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+
+        .footer-text {
+            text-align: center;
+            font-size: 12px;
+            color: #64748B;
+        }
+
+        .footer-text a {
+            color: #3B82F6;
+            text-decoration: none;
+        }
+
+        /* Right Side - Logo & Gradient */
+        .right-side {
+            flex: 1;
+            background: radial-gradient(circle at 50% 80%, #1D4ED8 0%, #0A0F1E 60%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 400px;
+            height: 400px;
+        }
+
+        /* SVG Logo directly embedded as requested */
+        .logo-svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 30px rgba(59, 130, 246, 0.4));
+        }
+
+        .error-msg {
+            color: #EF4444;
+            font-size: 12px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <!-- Panel Izquierdo: Formulario -->
+        <div class="left-side">
+            <div class="header">
+                <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                KyaTracker
+            </div>
+            
+            <div class="form-wrapper">
+                <h1 id="formTitle">Iniciar sesión</h1>
+                <p id="formSubtitle">Ingresa con tus credenciales para continuar.</p>
+                
+                <form method="POST" action="/login" id="loginForm">
+                    <input type="hidden" name="mode" id="mode" value="login">
+                    
+                    {% if error %}
+                    <div class="error-msg">{{ error }}</div>
+                    {% endif %}
+
+                    <div class="input-group">
+                        <input type="text" name="email" placeholder="Usuario / Correo" required>
+                    </div>
+                    
+                    <div class="input-group" style="position: relative;">
+                        <input type="password" name="password" id="password" placeholder="Contraseña" required>
+                        <button type="button" onclick="togglePassword()" style="position: absolute; right: 15px; top: 15px; background: none; border: none; color: #64748B; cursor: pointer;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="options">
+                        <input type="checkbox" id="remember">
+                        <label for="remember">Recordarme</label>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="submitBtn">Entrar</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Panel Derecho: Logo y Gradiente -->
+        <div class="right-side">
+            <div class="logo-container">
+                <img src="/static/img/kya_logo.png" class="logo-svg" alt="KyaTracker Logo" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 30px rgba(59, 130, 246, 0.4));">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword() {
+            const pwd = document.getElementById('password');
+            if (pwd.type === 'password') {
+                pwd.type = 'text';
+            } else {
+                pwd.type = 'password';
+            }
+        }
+    </script>
+</body>
+</html>

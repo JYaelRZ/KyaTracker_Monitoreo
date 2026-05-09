@@ -3,6 +3,7 @@ import sys
 import customtkinter as ctk
 
 from database.setup_db import init_db
+from modules.login_ui import LoginWindow
 from modules.dashboard_ui import MonitoreoDashboard
 
 ctk.set_appearance_mode("light") # Coincide con las capturas de Crextio
@@ -22,9 +23,27 @@ class App(ctk.CTk):
         # Inicializar Base de Datos en Supabase
         init_db()
 
-        # Cargar UI Principal
-        self.main_frame = MonitoreoDashboard(self)
-        self.main_frame.grid(row=0, column=0, sticky="nsew")
+        self.current_frame = None
+        self.show_login()
+
+    def show_login(self):
+        if self.current_frame:
+            self.current_frame.destroy()
+        # The login window is dark theme
+        self.configure(bg="#0A0B1A") 
+        self.current_frame = LoginWindow(self, on_login_success=self.show_dashboard)
+        self.current_frame.grid(row=0, column=0, sticky="nsew")
+
+    def show_dashboard(self, user):
+        if self.current_frame:
+            self.current_frame.destroy()
+        
+        # Reset to light theme for dashboard
+        self.configure(bg="#F4F7FE") 
+        
+        # Pass user to dashboard
+        self.current_frame = MonitoreoDashboard(self, user=user)
+        self.current_frame.grid(row=0, column=0, sticky="nsew")
 
 if __name__ == "__main__":
     app = App()

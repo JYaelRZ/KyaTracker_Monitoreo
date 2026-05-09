@@ -2,20 +2,103 @@
 Flask backend for KyaTracker Monitoreo y Custodia Digital
 """
 import os, uuid, datetime, json, csv, io
-from flask import Flask, render_template, request, jsonify, send_file, Response
+from flask import Flask, render_template, request, jsonify, send_file, Response, session, redirect, url_for
+from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import func
 from database.connection import SessionLocal
-from database.models import MonitoringService, ClientStatus
+from database.models import MonitoringService, ClientStatus, User
 from datetime import timezone
 from utils.exporter import export_data_to_excel_file
 from utils.ticket_generator import generate_monitoring_ticket_pdf
 from utils.invoice_generator import generate_consolidated_invoice
 
 app = Flask(__name__)
+app.secret_key = 'super_secret_kya_key'
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+    return render_template('index.html', user_role=session.get('role'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        with SessionLocal() as db:
+            user = db.query(User).filter(User.email == email).first()
+            if user and check_password_hash(user.password, password):
+                session['user_id'] = user.id
+                session['role'] = user.role
+                session['permissions'] = user.permissions or '[]'
+                return redirect(url_for('index'))
+            else:
+                return render_template('login.html', error='Credenciales incorrectas')
+                    
+    return render_template('login.html')
+
+@app.route('/api/users', methods=['GET', 'POST'])
+def manage_users():
+    if session.get('role') != 'admin':
+        return jsonify({'error': 'No autorizado'}), 403
+        
+    with SessionLocal() as db:
+        if request.method == 'GET':
+            users = db.query(User).all()
+            return jsonify([{
+                'id': u.id,
+                'email': u.email,
+                'role': u.role,
+                'permissions': json.loads(u.permissions) if u.permissions else []
+            } for u in users])
+            
+        elif request.method == 'POST':
+            data = request.json
+            email = data.get('email')
+            password = data.get('password')
+            role = data.get('role', 'normal')
+            permissions = json.dumps(data.get('permissions', []))
+            
+            if db.query(User).filter(User.email == email).first():
+                return jsonify({'error': 'El usuario ya existe'}), 400
+                
+            new_user = User(email=email, password=generate_password_hash(password), role=role, permissions=permissions)
+            db.add(new_user)
+            db.commit()
+            return jsonify({'message': 'Usuario creado'})
+
+@app.route('/api/users/<user_id>', methods=['PUT', 'DELETE'])
+def update_user(user_id):
+    if session.get('role') != 'admin':
+        return jsonify({'error': 'No autorizado'}), 403
+        
+    with SessionLocal() as db:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return jsonify({'error': 'No encontrado'}), 404
+            
+        if request.method == 'DELETE':
+            db.delete(user)
+            db.commit()
+            return jsonify({'message': 'Usuario eliminado'})
+            
+        elif request.method == 'PUT':
+            data = request.json
+            if 'password' in data and data['password']:
+                user.password = generate_password_hash(data['password'])
+            if 'role' in data:
+                user.role = data['role']
+            if 'permissions' in data:
+                user.permissions = json.dumps(data['permissions'])
+            db.commit()
+            return jsonify({'message': 'Usuario actualizado'})
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 @app.route('/api/clients', methods=['GET'])
 def get_clients():
@@ -544,5 +627,20 @@ def update_client_status(client_name):
 
 if __name__ == '__main__':
     from database.setup_db import init_db
+    from sqlalchemy import text
     init_db()
+    
+    with SessionLocal() as db:
+        try:
+            db.execute(text('ALTER TABLE users ADD COLUMN IF NOT EXISTS permissions VARCHAR(255) DEFAULT \'[]\''))
+            db.commit()
+        except:
+            db.rollback()
+            
+        admin = db.query(User).filter_by(email="admin").first()
+        if not admin:
+            admin = User(email="admin", password=generate_password_hash("admin123"), role="admin", permissions='["all"]')
+            db.add(admin)
+            db.commit()
+            
     app.run(debug=True, port=5050)

@@ -21,7 +21,8 @@ async function loadGlobalStats() {
         const month = document.getElementById('globalMonthFilter')?.value || '';
         const url = month ? `/api/global_stats?month=${month}` : '/api/global_stats';
         const r = await fetch(url), d = await r.json();
-        document.getElementById('globalRevenue').textContent = `$${d.total_revenue.toLocaleString('es-MX', {minimumFractionDigits:2})}`;
+        const globalRevEl = document.getElementById('globalRevenue');
+        if(globalRevEl) globalRevEl.textContent = `$${d.total_revenue.toLocaleString('es-MX', {minimumFractionDigits:2})}`;
         document.getElementById('globalClients').textContent = d.total_clients;
         document.getElementById('globalTotalServices').textContent = d.total_services;
         document.getElementById('globalActive').textContent = d.total_active;
@@ -132,11 +133,16 @@ async function loadClientStats(name){
         let url = `/api/client_stats?client=${encodeURIComponent(name)}`;
         if(month) url += `&month=${month}`;
         const r=await fetch(url),d=await r.json();
-    document.getElementById('statServices').textContent=d.total_services;
-    document.getElementById('statActive').textContent=d.active;
-    document.getElementById('statRevenue').textContent=`$${d.total_revenue.toLocaleString('es-MX',{minimumFractionDigits:2})}`;
-    document.getElementById('statMinutes').textContent=d.total_minutes.toLocaleString();
-    renderCharts(d.destinations);}catch(e){console.error(e);}
+        const statServices = document.getElementById('statServices');
+        if(statServices) statServices.textContent = d.total_services;
+        const statActive = document.getElementById('statActive');
+        if(statActive) statActive.textContent = d.active;
+        const statRevenue = document.getElementById('statRevenue');
+        if(statRevenue) statRevenue.textContent = `$${d.total_revenue.toLocaleString('es-MX',{minimumFractionDigits:2})}`;
+        const statMinutes = document.getElementById('statMinutes');
+        if(statMinutes) statMinutes.textContent = d.total_minutes.toLocaleString();
+        renderCharts(d.destinations);
+    }catch(e){console.error(e);}
 }
 
 function groupDestinations(destinations){
@@ -192,11 +198,23 @@ function renderServicesTable(services){
             mins = h>0 ? `${h}h ${m}m` : `${m}m`;
         }
         const statusOpts = ['En proceso de facturación', 'Facturado', 'Facturado y pagado', 'Pagado', 'Pendiente'];
-        let statusSelect = `<select onchange="updateServiceStatus('${s.id}', this.value, this)" style="padding:4px; border-radius:4px; font-size:12px; background:var(--bg-card); color:var(--text-primary); border:1px solid var(--border-color);">`;
-        statusOpts.forEach(opt => {
-            statusSelect += `<option value="${opt}" ${s.financial_status === opt ? 'selected' : ''}>${opt}</option>`;
-        });
-        statusSelect += `</select>`;
+        let statusSelect = '';
+        if (window.USER_ROLE === 'admin') {
+            statusSelect = `<select onchange="updateServiceStatus('${s.id}', this.value, this)" style="padding:4px; border-radius:4px; font-size:12px; background:var(--bg-card); color:var(--text-primary); border:1px solid var(--border-color);">`;
+            statusOpts.forEach(opt => {
+                statusSelect += `<option value="${opt}" ${s.financial_status === opt ? 'selected' : ''}>${opt}</option>`;
+            });
+            statusSelect += `</select>`;
+        } else {
+            statusSelect = `<span class="badge" style="background:#e2e8f0; color:#475569; font-size:12px;">${s.financial_status || 'En proceso'}</span>`;
+        }
+
+        let actions = '';
+        if (window.USER_ROLE === 'admin') {
+            actions = `<button onclick="editService('${s.id}')" title="Editar">✏️</button><button onclick="openSaveDialog('ticket','${s.id}','${s.unit}')" title="Ticket" ${!s.arrival_time?'disabled style="opacity:0.3"':''}>📄</button><button class="delete" onclick="deleteService('${s.id}')" title="Eliminar">🗑️</button>`;
+        } else {
+            actions = `<button onclick="openSaveDialog('ticket','${s.id}','${s.unit}')" title="Ticket" ${!s.arrival_time?'disabled style="opacity:0.3"':''}>📄</button>`;
+        }
 
         const tr=document.createElement('tr');
         tr.dataset.status = (s.financial_status || '').trim(); // for filtering
@@ -209,7 +227,7 @@ function renderServicesTable(services){
             ${s.arrival_time||'<span class="status-badge active">En Ruta</span>'}
             ${!s.arrival_time ? `<button onclick="openQuickTimeModal('${s.id}', 'arrive')" title="Registrar Llegada" style="background:none;border:none;cursor:pointer;font-size:12px;">🏁</button>` : ''}
         </td>
-        <td>${mins}</td><td>${cost}</td><td>${statusSelect}</td><td><div class="row-actions"><button onclick="editService('${s.id}')" title="Editar">✏️</button><button onclick="openSaveDialog('ticket','${s.id}','${s.unit}')" title="Ticket" ${!s.arrival_time?'disabled style="opacity:0.3"':''}>📄</button><button class="delete" onclick="deleteService('${s.id}')" title="Eliminar">🗑️</button></div></td>`;
+        <td>${mins}</td><td>${cost}</td><td>${statusSelect}</td><td><div class="row-actions">${actions}</div></td>`;
         tbody.appendChild(tr);
     });
 }

@@ -12,8 +12,9 @@ from utils.exporter import export_data_to_excel
 from utils.ticket_generator import generate_monitoring_ticket_pdf
 
 class MonitoreoDashboard(ctk.CTkFrame):
-    def __init__(self, master, **kwargs):
+    def __init__(self, master, user=None, **kwargs):
         super().__init__(master, fg_color="#F4F7FE", **kwargs)
+        self.user = user
         
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -45,8 +46,17 @@ class MonitoreoDashboard(ctk.CTkFrame):
         self.card_active = self.create_summary_card(summary_frame, "En Ruta", "0")
         self.card_active.pack(side="left", padx=10)
         
-        self.card_revenue = self.create_summary_card(summary_frame, "Ingresos Mensuales", "$0.00")
-        self.card_revenue.pack(side="left", padx=10)
+        if self.user and self.user.role == 'admin':
+            self.card_revenue = self.create_summary_card(summary_frame, "Ingresos Mensuales", "$0.00")
+            self.card_revenue.pack(side="left", padx=10)
+        else:
+            self.card_revenue = None
+            
+        btn_logout = ctk.CTkButton(
+            summary_frame, text="Cerrar Sesión", fg_color="#E11D48", hover_color="#BE123C", 
+            corner_radius=8, width=100, command=self.master.show_login
+        )
+        btn_logout.pack(side="left", padx=10)
 
     def create_summary_card(self, parent, title, value):
         card = ctk.CTkFrame(parent, fg_color="#FFFFFF", corner_radius=15, border_width=1, border_color="#E2E8F0")
@@ -59,7 +69,8 @@ class MonitoreoDashboard(ctk.CTkFrame):
 
     def update_summary_cards(self, active_count, total_revenue):
         self.card_active.lbl_val.configure(text=str(active_count))
-        self.card_revenue.lbl_val.configure(text=f"${total_revenue:,.2f}")
+        if self.card_revenue:
+            self.card_revenue.lbl_val.configure(text=f"${total_revenue:,.2f}")
 
     def create_form_panel(self):
         self.form_frame = ctk.CTkScrollableFrame(self, fg_color="#FFFFFF", corner_radius=20)
@@ -77,7 +88,11 @@ class MonitoreoDashboard(ctk.CTkFrame):
         self.entry_client = self._create_input("Cliente:", "Nombre del cliente")
         self.entry_origin = self._create_input("Origen:", "Dirección/Lugar de inicio")
         self.entry_dest = self._create_input("Destino:", "Dirección/Lugar de llegada")
-        self.entry_rate = self._create_input("Tarifa por Hora ($):", "Ej. 250.00")
+        
+        if self.user and self.user.role == 'admin':
+            self.entry_rate = self._create_input("Tarifa por Hora ($):", "Ej. 250.00")
+        else:
+            self.entry_rate = None
 
         # Botones
         self.btn_start = ctk.CTkButton(
@@ -209,9 +224,10 @@ class MonitoreoDashboard(ctk.CTkFrame):
         client = self.entry_client.get().strip()
         orig = self.entry_origin.get().strip()
         dest = self.entry_dest.get().strip()
-        rate_str = self.entry_rate.get().strip()
+        
+        rate_str = self.entry_rate.get().strip() if self.entry_rate else "0"
 
-        if not all([unit, op, client, orig, dest, rate_str]):
+        if not all([unit, op, client, orig, dest]):
             messagebox.showwarning("Faltan datos", "Por favor completa todos los campos para registrar la salida.")
             return
 
@@ -314,7 +330,8 @@ class MonitoreoDashboard(ctk.CTkFrame):
             self.entry_client.delete(0, 'end'); self.entry_client.insert(0, s.client)
             self.entry_origin.delete(0, 'end'); self.entry_origin.insert(0, s.origin)
             self.entry_dest.delete(0, 'end'); self.entry_dest.insert(0, s.destination)
-            self.entry_rate.delete(0, 'end'); self.entry_rate.insert(0, str(s.hourly_rate))
+            if self.entry_rate:
+                self.entry_rate.delete(0, 'end'); self.entry_rate.insert(0, str(s.hourly_rate))
             
             if not s.arrival_time:
                 self.btn_arrive.configure(state="normal")
@@ -342,6 +359,9 @@ class MonitoreoDashboard(ctk.CTkFrame):
         self.btn_arrive.configure(state="disabled")
         self.btn_ticket.configure(state="disabled")
         
-        for e in [self.entry_unit, self.entry_operator, self.entry_client, 
-                  self.entry_origin, self.entry_dest, self.entry_rate]:
+        entries = [self.entry_unit, self.entry_operator, self.entry_client, self.entry_origin, self.entry_dest]
+        if self.entry_rate:
+            entries.append(self.entry_rate)
+            
+        for e in entries:
             e.delete(0, 'end')
