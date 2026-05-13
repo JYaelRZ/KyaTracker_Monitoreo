@@ -209,15 +209,22 @@ function renderServicesTable(services){
             statusSelect = `<span class="badge" style="background:#e2e8f0; color:#475569; font-size:12px;">${s.financial_status || 'En proceso'}</span>`;
         }
 
-        let actions = '';
+        let actions = `<button onclick="editService('${s.id}')" title="Editar">✏️</button>`;
         if (window.USER_ROLE === 'admin') {
-            actions = `<button onclick="editService('${s.id}')" title="Editar">✏️</button><button onclick="openSaveDialog('ticket','${s.id}','${s.unit}')" title="Ticket" ${!s.arrival_time?'disabled style="opacity:0.3"':''}>📄</button><button class="delete" onclick="deleteService('${s.id}')" title="Eliminar">🗑️</button>`;
-        } else {
-            actions = `<button onclick="openSaveDialog('ticket','${s.id}','${s.unit}')" title="Ticket" ${!s.arrival_time?'disabled style="opacity:0.3"':''}>📄</button>`;
+            actions += `<button onclick="openSaveDialog('ticket','${s.id}','${s.unit}')" title="Ticket" ${!s.arrival_time?'disabled style="opacity:0.3"':''}>📄</button><button class="delete" onclick="deleteService('${s.id}')" title="Eliminar">🗑️</button>`;
         }
 
         const tr=document.createElement('tr');
         tr.dataset.status = (s.financial_status || '').trim(); // for filtering
+        let costCell = '';
+        if (window.USER_ROLE === 'admin') {
+            if (!s.hourly_rate || s.hourly_rate === 0) {
+                costCell = `<td><span style="color:#ef4444;font-size:12px;font-weight:600;" title="El administrador debe asignar un costo">⚠️ Falta Tarifa</span></td>`;
+            } else {
+                costCell = `<td>${cost}</td>`;
+            }
+        }
+
         tr.innerHTML=`<td>${s.unit}</td><td>${s.operator}</td><td>${s.origin}</td><td>${s.destination}</td>
         <td>
             ${s.start_time}
@@ -227,7 +234,7 @@ function renderServicesTable(services){
             ${s.arrival_time||'<span class="status-badge active">En Ruta</span>'}
             ${!s.arrival_time ? `<button onclick="openQuickTimeModal('${s.id}', 'arrive')" title="Registrar Llegada" style="background:none;border:none;cursor:pointer;font-size:12px;">🏁</button>` : ''}
         </td>
-        <td>${mins}</td><td>${cost}</td><td>${statusSelect}</td><td><div class="row-actions">${actions}</div></td>`;
+        <td>${mins}</td>${costCell}<td>${statusSelect}</td><td><div class="row-actions">${actions}</div></td>`;
         tbody.appendChild(tr);
     });
 }
@@ -347,7 +354,12 @@ function openModal(editData=null){
     document.getElementById('modalTitle').textContent=editData?'Editar Servicio':'Nuevo Servicio';
     document.getElementById('serviceForm').reset();document.getElementById('editingId').value='';
     if(currentClient)document.getElementById('fClient').value=currentClient;
-    const now=new Date();document.getElementById('fStartDate').value=now.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'});
+    const now=new Date();
+    const dStr = now.getDate().toString().padStart(2, '0');
+    const mStr = (now.getMonth() + 1).toString().padStart(2, '0');
+    const yStr = now.getFullYear();
+    document.getElementById('fStartDate').value=`${yStr}-${mStr}-${dStr}`;
+    
     if(editData){
         document.getElementById('editingId').value=editData.id;
         document.getElementById('fUnit').value=editData.unit;document.getElementById('fOperator').value=editData.operator;
@@ -358,16 +370,34 @@ function openModal(editData=null){
         if(editData.arrival_time){const p=parseTimeString(editData.arrival_time);if(p){document.getElementById('fEndDate').value=p.date;document.getElementById('fEndHour').value=p.hour;document.getElementById('fEndMinute').value=p.minute;document.getElementById('fEndAmpm').value=p.ampm;}}
     }
 }
-function parseTimeString(str){const m=str.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{1,2}):(\d{2})\s+(AM|PM)/i);return m?{date:m[1],hour:m[2],minute:m[3],ampm:m[4].toUpperCase()}:null;}
+
+// Devuelve YYYY-MM-DD a partir de DD/MM/YYYY
+function parseTimeString(str){const m=str.match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s+(AM|PM)/i);return m?{date:`${m[3]}-${m[2]}-${m[1]}`,hour:m[4].padStart(2,'0'),minute:m[5],ampm:m[6].toUpperCase()}:null;}
 function closeModal(){document.getElementById('serviceModal').classList.remove('show');}
+
+// Convierte de YYYY-MM-DD (del input type=date) a DD/MM/YYYY para el backend
+function formatForBackend(isoDate) {
+    if(!isoDate) return '';
+    const parts = isoDate.split('-');
+    if(parts.length !== 3) return isoDate;
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
 
 async function saveService(){
     const editId=document.getElementById('editingId').value;
     const unit=document.getElementById('fUnit').value.trim(),operator=document.getElementById('fOperator').value.trim(),client=document.getElementById('fClient').value.trim(),origin=document.getElementById('fOrigin').value.trim(),destination=document.getElementById('fDestination').value.trim(),rate=document.getElementById('fRate').value.trim(),status=document.getElementById('fStatus').value;
     if(!unit||!operator||!client||!origin||!destination||!rate){showToast('Completa todos los campos obligatorios','error');return;}
-    const startTime=`${document.getElementById('fStartDate').value} ${document.getElementById('fStartHour').value}:${document.getElementById('fStartMinute').value} ${document.getElementById('fStartAmpm').value}`;
-    let arrivalTime='';const ed=document.getElementById('fEndDate').value,eh=document.getElementById('fEndHour').value,em=document.getElementById('fEndMinute').value;
-    if(ed&&eh&&em)arrivalTime=`${ed} ${eh}:${em} ${document.getElementById('fEndAmpm').value}`;
+    
+    const sdFormatted = formatForBackend(document.getElementById('fStartDate').value);
+    const startTime=`${sdFormatted} ${document.getElementById('fStartHour').value}:${document.getElementById('fStartMinute').value} ${document.getElementById('fStartAmpm').value}`;
+    
+    let arrivalTime='';
+    const ed=document.getElementById('fEndDate').value,eh=document.getElementById('fEndHour').value,em=document.getElementById('fEndMinute').value;
+    if(ed&&eh&&em) {
+        const edFormatted = formatForBackend(ed);
+        arrivalTime=`${edFormatted} ${eh}:${em} ${document.getElementById('fEndAmpm').value}`;
+    }
+    
     const body={unit,operator,client,origin,destination,hourly_rate:parseFloat(rate),start_time:startTime,arrival_time:arrivalTime||null,financial_status:status};
     try{
         const res=editId?await fetch(`/api/services/${editId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}):await fetch('/api/services',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -573,7 +603,10 @@ function openQuickTimeModal(serviceId, actionStr) {
     
     // Set to current time
     const now = new Date();
-    document.getElementById('qtDate').value = now.toLocaleDateString('es-MX', {day:'2-digit',month:'2-digit',year:'numeric'});
+    const dStr = now.getDate().toString().padStart(2, '0');
+    const mStr = (now.getMonth() + 1).toString().padStart(2, '0');
+    const yStr = now.getFullYear();
+    document.getElementById('qtDate').value = `${dStr}/${mStr}/${yStr}`;
     let h = now.getHours();
     const m = Math.floor(now.getMinutes()/5)*5;
     const ampm = h >= 12 ? 'PM' : 'AM';
@@ -597,7 +630,8 @@ async function saveQuickTime() {
     const ampm = document.getElementById('qtAmpm').value;
     if(!d || !h || !m) { showToast('Completa la fecha y hora', 'error'); return; }
     
-    const valueStr = `${d} ${h}:${m} ${ampm}`;
+    const dFormatted = formatForBackend(d);
+    const valueStr = `${dFormatted} ${h}:${m} ${ampm}`;
     try {
         const res = await fetch(`/api/services/${currentQuickServiceId}/quick_action`, {
             method: 'PUT',

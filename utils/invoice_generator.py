@@ -20,8 +20,8 @@ def generate_consolidated_invoice(output_path, client_name, date_range_str, serv
     Story = []
     styles = getSampleStyleSheet()
     
-    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=20, textColor=colors.HexColor('#2D6ADF'), spaceAfter=5, alignment=1)
-    sub_title_style = ParagraphStyle('CustomSubTitle', parent=styles['Normal'], fontSize=11, textColor=colors.gray, spaceAfter=20, alignment=1)
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=20, textColor=colors.HexColor('#2D6ADF'), spaceAfter=5, alignment=0)
+    sub_title_style = ParagraphStyle('CustomSubTitle', parent=styles['Normal'], fontSize=11, textColor=colors.gray, spaceAfter=20, alignment=0)
 
     # Logo
     logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "logo_ticket.png")
@@ -113,4 +113,30 @@ def generate_consolidated_invoice(output_path, client_name, date_range_str, serv
     ]))
     Story.append(t_totals)
 
-    doc.build(Story)
+    def draw_bg_logos(canvas, doc):
+        import os
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        logo_sup = os.path.join(base_dir, "static", "img", "Logosuperior.png")
+        logo_inf = os.path.join(base_dir, "static", "img", "logoinferior.png")
+        
+        if os.path.exists(logo_sup):
+            # Top right
+            from reportlab.lib.utils import ImageReader
+            img = ImageReader(logo_sup)
+            mw, mh = img.getSize()
+            aspect = mh / float(mw)
+            w = 90
+            h = w * aspect
+            canvas.drawImage(logo_sup, doc.pagesize[0] - w - 20, doc.pagesize[1] - h - 20, width=w, height=h, mask='auto')
+            
+        if os.path.exists(logo_inf):
+            # Bottom left
+            from reportlab.lib.utils import ImageReader
+            img = ImageReader(logo_inf)
+            mw, mh = img.getSize()
+            aspect = mh / float(mw)
+            w = 120
+            h = w * aspect
+            canvas.drawImage(logo_inf, 20, 20, width=w, height=h, mask='auto')
+
+    doc.build(Story, onFirstPage=draw_bg_logos, onLaterPages=draw_bg_logos)

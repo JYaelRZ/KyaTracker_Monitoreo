@@ -23,11 +23,14 @@
             </div>
 
             <div class="sidebar-menu">
+                {% if user_role == 'admin' %}
                 <div class="menu-item active" id="btnHome" onclick="clearClientSelection()"
                     style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin: 0 12px 16px; background: rgba(59,130,246,0.1); border-radius: 8px; cursor: pointer; border: 1px solid rgba(59,130,246,0.2); transition: all 0.2s;">
                     <span style="font-size: 18px;">🏠</span>
                     <span style="font-weight: 600; color: var(--accent-blue);">Resumen General</span>
                 </div>
+                {% endif %}
+
 
                 <div class="sidebar-title">
                     <span>CLIENTES</span>
@@ -52,9 +55,11 @@
                 <h2 id="clientTitle">Bienvenido a <span>KyaTracker</span></h2>
                 <div class="header-actions" style="display:flex; gap:12px; align-items:center;">
                     <input type="month" id="globalMonthFilter" class="month-filter" onchange="applyGlobalMonthFilter()" title="Filtrar por mes">
+                    {% if user_role == 'admin' %}
                     <button class="btn btn-export" onclick="openInvoiceModal()" title="Factura Global">🧾
                         Factura</button>
                     <button class="btn btn-export" onclick="exportCSV()" title="Exportar CSV">📥 CSV</button>
+                    {% endif %}
                     <button class="btn-icon" onclick="loadClients()" title="Actualizar">🔄</button>
                     
                     {% if user_role == 'admin' %}
@@ -75,6 +80,7 @@
             <div id="welcomeScreen" class="welcome-screen" style="display:none;"></div>
 
             <!-- Global Dashboard -->
+            {% if user_role == 'admin' %}
             <div id="globalDashboard" style="display: block; margin-top: 20px;">
                 <div
                     style="background: var(--bg-card); padding: 30px; border-radius: 16px; border: 1px solid var(--border-color); text-align: left; margin-bottom: 24px;">
@@ -125,6 +131,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
 
             <!-- Dashboard Content (hidden initially) -->
             <div id="dashboardContent" style="display:none;">
@@ -220,7 +227,9 @@
                                     <th>Salida</th>
                                     <th>Llegada</th>
                                     <th>Mins</th>
+                                    {% if user_role == 'admin' %}
                                     <th>Costo</th>
+                                    {% endif %}
                                     <th>Estado</th>
                                     <th>Acciones</th>
                                 </tr>
@@ -277,7 +286,7 @@
                     <div class="form-group">
                         <label>🕐 Hora de Salida</label>
                         <div class="time-row">
-                            <input type="text" id="fStartDate" placeholder="DD/MM/YYYY">
+                            <input type="date" id="fStartDate">
                             <select id="fStartHour">
                                 <option value="">HH</option>
                                 <option>01</option>
@@ -319,7 +328,7 @@
                     <div class="form-group">
                         <label>🏁 Hora de Llegada (opcional)</label>
                         <div class="time-row">
-                            <input type="text" id="fEndDate" placeholder="DD/MM/YYYY">
+                            <input type="date" id="fEndDate">
                             <select id="fEndHour">
                                 <option value="">HH</option>
                                 <option>01</option>
@@ -357,6 +366,7 @@
                         </div>
                     </div>
 
+                    {% if user_role == 'admin' %}
                     <div class="form-group">
                         <label>Estado Financiero</label>
                         <select id="fStatus">
@@ -367,6 +377,9 @@
                             <option>Pendiente</option>
                         </select>
                     </div>
+                    {% else %}
+                    <input type="hidden" id="fStatus" value="Pendiente">
+                    {% endif %}
                 </form>
             </div>
             <div class="modal-footer">
@@ -416,7 +429,7 @@
                 <div class="form-group">
                     <label>Fecha y Hora</label>
                     <div class="time-row">
-                        <input type="text" id="qtDate" placeholder="DD/MM/YYYY">
+                        <input type="date" id="qtDate">
                         <select id="qtHour">
                             <option value="">HH</option>
                             <option>01</option><option>02</option><option>03</option><option>04</option><option>05</option><option>06</option>

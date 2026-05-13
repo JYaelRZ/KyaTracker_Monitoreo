@@ -52,7 +52,35 @@ const CITY_COORDS={
 "Baja California Sur":[-112.00,24.14],"La Paz":[-110.31,24.14],
 "Orizaba":[-97.10,18.85],"Reynosa":[-98.28,26.09],"Torreón":[-103.44,25.54],
 "Irapuato":[-101.35,20.68],"Celaya":[-100.82,20.53],"Salamanca":[-101.19,20.57],
-"Silao":[-101.43,20.95],"Zapopan":[-103.40,20.72],"Tlaquepaque":[-103.31,20.64]
+"Perote":[-97.24,19.56],"Tuxpan":[-97.40,20.95],"Paso del Toro":[-96.13,19.03],
+"Rio Blanco":[-97.15,18.83],"Amatlan":[-96.91,18.84],"Amatlán":[-96.91,18.84],
+"La Tinaja":[-96.53,18.75],"Chinameca":[-94.68,18.02],
+// Zonas adicionales de Veracruz
+"Boca del Río":[-96.10, 19.10],"Córdoba":[-96.93, 18.88],"Coatzacoalcos":[-94.43, 18.13],
+"Minatitlán":[-94.55, 18.00],"Poza Rica":[-97.45, 20.53],"Papantla":[-97.32, 20.45],
+"San Andrés Tuxtla":[-95.20, 18.45],"Martínez de la Torre":[-97.05, 20.06],
+"Tierra Blanca":[-96.35, 18.45],"Alvarado":[-95.76, 18.77],"Coatepec":[-96.96, 19.45],
+"Cosoleacaque":[-94.63, 18.00],"Fortín":[-97.00, 18.90],"Ixtaczoquitlán":[-97.06, 18.85],
+"Pánuco":[-98.18, 22.05],"Acayucan":[-94.91, 17.95],"Agua Dulce":[-94.13, 18.13],
+"Las Choapas":[-94.09, 17.91],"Nanchital":[-94.41, 18.06],"Tres Valles":[-96.14, 18.23],
+"Huatusco":[-96.96, 19.14],"Cuitláhuac":[-96.72, 18.81],"Cardel":[-96.37, 19.36],
+"Catemaco":[-95.11, 18.42],"Tezonapa":[-96.82, 18.60],"Zongolica":[-97.00, 18.66],
+"Huayacocotla":[-98.48, 20.53],"Tlalixcoyan":[-96.06, 18.80],
+// Otras ciudades importantes de México (Fallback visual)
+"Apodaca":[-100.18, 25.78],"Escobedo":[-100.32, 25.80],"Guadalupe":[-100.25, 25.67],
+"San Pedro":[-100.40, 25.66],"Santa Catarina":[-100.46, 25.67],"San Nicolás":[-100.30, 25.75],
+"Nuevo Laredo":[-99.50, 27.47],"Matamoros":[-97.50, 25.88],"Ciudad Victoria":[-99.13, 23.73],
+"Nogales":[-110.94, 31.30],"Ciudad Obregón":[-109.93, 27.48],"Guaymas":[-110.89, 27.91],
+"Los Mochis":[-108.98, 25.79],"Uruapan":[-102.06, 19.42],"Zamora":[-102.28, 19.98],
+"Lázaro Cárdenas":[-102.19, 17.95],"Ecatepec":[-99.06, 19.60],"Naucalpan":[-99.23, 19.47],
+"Tlalnepantla":[-99.18, 19.53],"Cuautitlán":[-99.18, 19.67],"Texcoco":[-98.88, 19.51],
+"Chalco":[-98.89, 19.26],"Playa del Carmen":[-87.07, 20.62],"Tulum":[-87.46, 20.21],
+"Chetumal":[-88.30, 18.50],"Cuernavaca":[-99.23, 18.92],"Jiutepec":[-99.18, 18.88],
+"Cuautla":[-98.94, 18.81],"Ciudad Juárez":[-106.48, 31.73],"Delicias":[-105.47, 28.19],
+"Cuauhtémoc":[-106.86, 28.40],"Tapachula":[-92.26, 14.90],"San Cristóbal":[-92.63, 16.73],
+"Chilpancingo":[-99.50, 17.55],"Iguala":[-99.53, 18.34],"Mexicali":[-115.46, 32.62],
+"Ensenada":[-116.60, 31.86],"Los Cabos":[-109.91, 22.89],"Cabo San Lucas":[-109.91, 22.89],
+"Puerto Vallarta":[-105.22, 20.60],"Monclova":[-101.42, 26.90],"Piedras Negras":[-100.52, 28.70]
 };
 
 function projectMerc(lon,lat,w,h){
@@ -89,14 +117,19 @@ async function loadMexicoMap(){
     }
 }
 
+function removeAccents(str) {
+    if(!str) return "";
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
 function findCityCoord(place){
     if(!place)return null;
-    const pl=place.toLowerCase();
+    const pl=removeAccents(place);
     for(const[k,v] of Object.entries(CITY_COORDS)){
-        if(pl.includes(k.toLowerCase()))return v;
+        if(pl.includes(removeAccents(k)))return v;
     }
     for(const[k,v] of Object.entries(CITY_COORDS)){
-        if(k.toLowerCase().includes(pl.split(',')[0].trim().toLowerCase()))return v;
+        if(removeAccents(k).includes(removeAccents(pl.split(',')[0].trim())))return v;
     }
     return null;
 }

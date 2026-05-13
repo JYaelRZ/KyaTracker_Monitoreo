@@ -325,6 +325,13 @@ def create_service():
                 hourly_rate=float(data['hourly_rate']),
                 financial_status=data.get('financial_status', 'En proceso de facturación')
             )
+            
+            if s.start_time and s.arrival_time:
+                diff = s.arrival_time - s.start_time
+                mins = int(diff.total_seconds() / 60)
+                s.billed_minutes = max(0, mins)
+                s.total_cost = (s.billed_minutes / 60.0) * (s.hourly_rate or 0)
+
             db.add(s)
             db.commit()
             db.refresh(s)
@@ -356,6 +363,12 @@ def update_service(service_id):
                 s.arrival_time = datetime.datetime.strptime(data['arrival_time'], '%d/%m/%Y %I:%M %p').replace(tzinfo=datetime.timezone.utc)
             else:
                 s.arrival_time = None
+                
+        if s.start_time and s.arrival_time:
+            diff = s.arrival_time - s.start_time
+            mins = int(diff.total_seconds() / 60)
+            s.billed_minutes = max(0, mins)
+            s.total_cost = (s.billed_minutes / 60.0) * (s.hourly_rate or 0)
         
         db.commit()
         return jsonify({'message': 'Servicio actualizado'})
@@ -597,6 +610,13 @@ def quick_action(service_id):
                 s.arrival_time = now
         elif action == 'status':
             s.financial_status = value
+            
+        # Recalcular costos y tiempos si ya hay llegada
+        if s.start_time and s.arrival_time:
+            diff = s.arrival_time - s.start_time
+            mins = int(diff.total_seconds() / 60)
+            s.billed_minutes = max(0, mins)
+            s.total_cost = (s.billed_minutes / 60.0) * (s.hourly_rate or 0)
             
         db.commit()
         return jsonify({'message': 'Actualizado'})

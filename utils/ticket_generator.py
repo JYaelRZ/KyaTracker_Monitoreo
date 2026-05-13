@@ -18,19 +18,19 @@ def generate_monitoring_ticket_pdf(output_path, folio, client_name, unit, origin
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
-        fontSize=24,
+        fontSize=20,
         textColor=colors.HexColor('#2D6ADF'),
         spaceAfter=5,
-        alignment=1 # Center
+        alignment=0 # Left
     )
     
     sub_title_style = ParagraphStyle(
         'CustomSubTitle',
         parent=styles['Normal'],
-        fontSize=12,
+        fontSize=11,
         textColor=colors.gray,
         spaceAfter=30,
-        alignment=1 # Center
+        alignment=0 # Left
     )
 
     logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "logo_ticket.png")
@@ -113,4 +113,30 @@ def generate_monitoring_ticket_pdf(output_path, folio, client_name, unit, origin
     )
     Story.append(Paragraph("¡Gracias por su preferencia y confianza!", thanks_style))
     
-    doc.build(Story)
+    def draw_bg_logos(canvas, doc):
+        import os
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        logo_sup = os.path.join(base_dir, "static", "img", "Logosuperior.png")
+        logo_inf = os.path.join(base_dir, "static", "img", "logoinferior.png")
+        
+        if os.path.exists(logo_sup):
+            # Top right
+            from reportlab.lib.utils import ImageReader
+            img = ImageReader(logo_sup)
+            mw, mh = img.getSize()
+            aspect = mh / float(mw)
+            w = 90
+            h = w * aspect
+            canvas.drawImage(logo_sup, doc.pagesize[0] - w - 20, doc.pagesize[1] - h - 20, width=w, height=h, mask='auto')
+            
+        if os.path.exists(logo_inf):
+            # Bottom left
+            from reportlab.lib.utils import ImageReader
+            img = ImageReader(logo_inf)
+            mw, mh = img.getSize()
+            aspect = mh / float(mw)
+            w = 120
+            h = w * aspect
+            canvas.drawImage(logo_inf, 20, 20, width=w, height=h, mask='auto')
+
+    doc.build(Story, onFirstPage=draw_bg_logos, onLaterPages=draw_bg_logos)
