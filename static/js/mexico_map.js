@@ -244,10 +244,16 @@ function renderMexicoMap(svgEl,services){
                 <text x="0" y="-2" text-anchor="middle" fill="#fff" font-size="9" font-weight="700" font-family="Inter,sans-serif">🚛 ${s.unit}</text>
                 <text x="0" y="10" text-anchor="middle" fill="#fff" font-size="8" font-family="Inter,sans-serif">${elapsed?'⏱ '+elapsed:''}</text>
             </g>`;
-        }else if(est){
+        }else if(!isActive){
+            let timeText = 'Completado';
+            if (s.billed_minutes) {
+                const hrs = Math.floor(s.billed_minutes / 60);
+                const mins = s.billed_minutes % 60;
+                timeText = `${hrs}h ${mins}m`;
+            }
             html+=`<g class="route-label" transform="translate(${lx},${ly})">
-                <rect x="-40" y="-10" width="80" height="20" rx="5" fill="rgba(30,41,59,0.9)" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
-                <text x="0" y="4" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="Inter,sans-serif">✅ ${est.text} · ${est.km}km</text>
+                <rect x="-35" y="-10" width="70" height="20" rx="5" fill="rgba(30,41,59,0.9)" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"/>
+                <text x="0" y="4" text-anchor="middle" fill="#94a3b8" font-size="8" font-family="Inter,sans-serif">✅ ${timeText}</text>
             </g>`;
         }
 
@@ -271,7 +277,12 @@ function renderMexicoMap(svgEl,services){
                     h+=`<div class="tt-time">⏱️ ${hrs}h ${mins}m en ruta</div>`;
                 }
             }else{
-                h+=`<div style="color:#10b981;">✅ Completado — ${d.mins||0} mins</div>`;
+                let timeStr = 'Completado';
+                if(d.mins){
+                    const m = parseInt(d.mins);
+                    timeStr += ` — ${Math.floor(m/60)}h ${m%60}m`;
+                }
+                h+=`<div style="color:#10b981;">✅ ${timeStr}</div>`;
             }
             tooltip.innerHTML=h;tooltip.style.display='block';
         });
