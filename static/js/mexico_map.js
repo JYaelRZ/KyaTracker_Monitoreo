@@ -242,7 +242,7 @@ function renderMexicoMap(svgEl,services){
             html+=`<g class="route-label" transform="translate(${lx},${ly})">
                 <rect x="-50" y="-16" width="100" height="32" rx="6" fill="${color}" opacity="0.95" filter="drop-shadow(0 2px 6px rgba(0,0,0,0.4))"/>
                 <text x="0" y="-2" text-anchor="middle" fill="#fff" font-size="9" font-weight="700" font-family="Inter,sans-serif">🚛 ${s.unit}</text>
-                <text x="0" y="10" text-anchor="middle" fill="#fff" font-size="8" font-family="Inter,sans-serif">${elapsed?'⏱ '+elapsed:''}${est?' · '+est.text:''}</text>
+                <text x="0" y="10" text-anchor="middle" fill="#fff" font-size="8" font-family="Inter,sans-serif">${elapsed?'⏱ '+elapsed:''}</text>
             </g>`;
         }else if(est){
             html+=`<g class="route-label" transform="translate(${lx},${ly})">
@@ -270,8 +270,6 @@ function renderMexicoMap(svgEl,services){
                     const hrs=Math.floor(diff/3600000),mins=Math.floor((diff%3600000)/60000);
                     h+=`<div class="tt-time">⏱️ ${hrs}h ${mins}m en ruta</div>`;
                 }
-                const est=estimateTime(d.origin,d.dest);
-                if(est)h+=`<div style="color:#94a3b8;font-size:11px;">📍 Distancia est: ${est.km}km · ${est.text}</div>`;
             }else{
                 h+=`<div style="color:#10b981;">✅ Completado — ${d.mins||0} mins</div>`;
             }
