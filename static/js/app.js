@@ -67,7 +67,7 @@ function renderClientList(clients){
     clients.forEach((c,i)=>{
         const ini=c.name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
         const col=colors[i%colors.length],act=currentClient===c.name?'active':'';
-        const div=document.createElement('div');div.className=`client-item ${act}`;
+        const div=document.createElement('div');div.className=`client-item ${act} ${c.is_active === false ? 'inactive' : ''}`;
         div.onclick=()=>{currentClient=c.name;selectClient(c.name);};
         const inactiveStyle = c.is_active === false ? 'opacity: 0.5; filter: grayscale(1);' : '';
         const nameText = c.is_active === false ? `🚫 ${c.name}` : c.name;
@@ -548,11 +548,12 @@ document.addEventListener('click', e => {
 async function inactivateClient() {
     if(!confirm('¿Estás seguro de que deseas inactivar este cliente? Sus datos no se mostrarán en los reportes globales.')) return;
     try {
-        await fetch(`/api/clients/${encodeURIComponent(currentClient)}/status`, {
+        const res = await fetch(`/api/clients/${encodeURIComponent(currentClient)}/status`, {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({action: 'inactivate'})
         });
+        if(!res.ok) throw new Error('Falló el servidor');
         showToast('Cliente inactivado');
         loadClients();
         selectClient(currentClient); // Refresh dropdown UI
@@ -563,11 +564,12 @@ async function inactivateClient() {
 
 async function activateClient() {
     try {
-        await fetch(`/api/clients/${encodeURIComponent(currentClient)}/status`, {
+        const res = await fetch(`/api/clients/${encodeURIComponent(currentClient)}/status`, {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({action: 'activate'})
         });
+        if(!res.ok) throw new Error('Falló el servidor');
         showToast('Cliente activado');
         loadClients();
         selectClient(currentClient); // Refresh dropdown UI
@@ -579,11 +581,12 @@ async function activateClient() {
 async function deleteClient() {
     if(!confirm('¿Estás seguro de que deseas ELIMINAR este cliente y todos sus servicios? Esta acción no se puede deshacer.')) return;
     try {
-        await fetch(`/api/clients/${encodeURIComponent(currentClient)}/status`, {
+        const res = await fetch(`/api/clients/${encodeURIComponent(currentClient)}/status`, {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({action: 'delete'})
         });
+        if(!res.ok) throw new Error('Falló el servidor');
         showToast('Cliente eliminado');
         clearClientSelection();
         loadClients();

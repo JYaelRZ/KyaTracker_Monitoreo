@@ -621,7 +621,7 @@ def quick_action(service_id):
         db.commit()
         return jsonify({'message': 'Actualizado'})
 
-@app.route('/api/clients/<client_name>/status', methods=['PUT'])
+@app.route('/api/clients/<path:client_name>/status', methods=['PUT'])
 def update_client_status(client_name):
     action = request.json.get('action') # 'inactivate', 'delete'
     with SessionLocal() as db:
