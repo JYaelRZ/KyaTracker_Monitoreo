@@ -110,11 +110,20 @@ def get_clients():
 def get_services():
     client = request.args.get('client', '')
     month_str = request.args.get('month')
+    date_from = request.args.get('date_from')  # YYYY-MM-DD
+    date_to = request.args.get('date_to')      # YYYY-MM-DD
     with SessionLocal() as db:
         q = db.query(MonitoringService).order_by(MonitoringService.created_at.desc())
         if client:
             q = q.filter(MonitoringService.client == client)
-        if month_str:
+        if date_from and date_to:
+            try:
+                start_dt = datetime.datetime.strptime(date_from, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+                end_dt = datetime.datetime.strptime(date_to, '%Y-%m-%d').replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+                q = q.filter(MonitoringService.start_time >= start_dt, MonitoringService.start_time <= end_dt)
+            except:
+                pass
+        elif month_str:
             try:
                 y, m = map(int, month_str.split('-'))
                 start_dt = datetime.datetime(y, m, 1, tzinfo=timezone.utc)
@@ -148,11 +157,20 @@ def get_services():
 def client_stats():
     client = request.args.get('client', '')
     month_str = request.args.get('month')
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
     with SessionLocal() as db:
         q = db.query(MonitoringService)
         if client:
             q = q.filter(MonitoringService.client == client)
-        if month_str:
+        if date_from and date_to:
+            try:
+                start_dt = datetime.datetime.strptime(date_from, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+                end_dt = datetime.datetime.strptime(date_to, '%Y-%m-%d').replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+                q = q.filter(MonitoringService.start_time >= start_dt, MonitoringService.start_time <= end_dt)
+            except:
+                pass
+        elif month_str:
             try:
                 y, m = map(int, month_str.split('-'))
                 start_dt = datetime.datetime(y, m, 1, tzinfo=timezone.utc)
@@ -199,11 +217,20 @@ def client_stats():
 def all_stats():
     """Stats summary for each client"""
     month_str = request.args.get('month') # YYYY-MM
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
     with SessionLocal() as db:
         inactive = [c[0] for c in db.query(ClientStatus.client).filter(ClientStatus.is_active == False).all()]
         q = db.query(MonitoringService)
             
-        if month_str:
+        if date_from and date_to:
+            try:
+                start_dt = datetime.datetime.strptime(date_from, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+                end_dt = datetime.datetime.strptime(date_to, '%Y-%m-%d').replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+                q = q.filter(MonitoringService.start_time >= start_dt, MonitoringService.start_time <= end_dt)
+            except:
+                pass
+        elif month_str:
             try:
                 y, m = map(int, month_str.split('-'))
                 start_dt = datetime.datetime(y, m, 1, tzinfo=timezone.utc)
@@ -240,13 +267,22 @@ def all_stats():
 def global_stats():
     """Global overview statistics for the main dashboard"""
     month_str = request.args.get('month') # YYYY-MM
+    date_from = request.args.get('date_from')
+    date_to = request.args.get('date_to')
     with SessionLocal() as db:
         inactive = [c[0] for c in db.query(ClientStatus.client).filter(ClientStatus.is_active == False).all()]
         q = db.query(MonitoringService)
         if inactive:
             q = q.filter(MonitoringService.client.notin_(inactive))
             
-        if month_str:
+        if date_from and date_to:
+            try:
+                start_dt = datetime.datetime.strptime(date_from, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+                end_dt = datetime.datetime.strptime(date_to, '%Y-%m-%d').replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+                q = q.filter(MonitoringService.start_time >= start_dt, MonitoringService.start_time <= end_dt)
+            except:
+                pass
+        elif month_str:
             try:
                 y, m = map(int, month_str.split('-'))
                 start_dt = datetime.datetime(y, m, 1, tzinfo=timezone.utc)

@@ -1,14 +1,28 @@
 let currentClient=null,allClients=[],allServices=[],topChart=null,bottomChart=null,globalChart=null;
 let pendingSaveType=null,pendingSaveServiceId=null;
 let currentMapFilter='all', mapZoomLevel=1, mapPanX=0, mapPanY=0, selectedRouteId=null;
+let currentIvaPercent = 16; // IVA por defecto
 document.addEventListener('DOMContentLoaded',()=>{loadClients();loadMexicoMap();});
 
 function showToast(m,t='success'){const c=document.getElementById('toastContainer'),d=document.createElement('div');d.className=`toast ${t}`;d.innerHTML=`${t==='success'?'✅':'❌'} ${m}`;c.appendChild(d);setTimeout(()=>d.remove(),3500);}
 
+function getFilterParams() {
+    const month = document.getElementById('globalMonthFilter')?.value || '';
+    const dateFrom = document.getElementById('dateFromFilter')?.value || '';
+    const dateTo = document.getElementById('dateToFilter')?.value || '';
+    let params = '';
+    if (dateFrom && dateTo) {
+        params = `date_from=${dateFrom}&date_to=${dateTo}`;
+    } else if (month) {
+        params = `month=${month}`;
+    }
+    return params;
+}
+
 async function loadClients(){
     try{
-        const month = document.getElementById('globalMonthFilter')?.value || '';
-        const url = month ? `/api/all_stats?month=${month}` : '/api/all_stats';
+        const params = getFilterParams();
+        const url = params ? `/api/all_stats?${params}` : '/api/all_stats';
         const r=await fetch(url),d=await r.json();
         allClients=d;renderClientList(d);
         document.getElementById('clientCount').textContent=d.length;
@@ -18,11 +32,14 @@ async function loadClients(){
 
 async function loadGlobalStats() {
     try {
-        const month = document.getElementById('globalMonthFilter')?.value || '';
-        const url = month ? `/api/global_stats?month=${month}` : '/api/global_stats';
+        const params = getFilterParams();
+        const url = params ? `/api/global_stats?${params}` : '/api/global_stats';
         const r = await fetch(url), d = await r.json();
         const globalRevEl = document.getElementById('globalRevenue');
-        if(globalRevEl) globalRevEl.textContent = `$${d.total_revenue.toLocaleString('es-MX', {minimumFractionDigits:2})}`;
+        if(globalRevEl) {
+            const revenueWithIva = d.total_revenue * (1 + currentIvaPercent / 100);
+            globalRevEl.textContent = `$${revenueWithIva.toLocaleString('es-MX', {minimumFractionDigits:2})}`;
+        }
         document.getElementById('globalClients').textContent = d.total_clients;
         document.getElementById('globalTotalServices').textContent = d.total_services;
         document.getElementById('globalActive').textContent = d.total_active;
@@ -93,8 +110,10 @@ async function selectClient(name){
     
     const clientData = allClients.find(c => c.name === name);
     const dropdown = document.getElementById('clientActionsDropdown');
+    const exportGroup = document.getElementById('clientExportActions');
     const menuBtn = document.getElementById('btnToggleStatus');
     if(dropdown) dropdown.style.display = 'block';
+    if(exportGroup) exportGroup.style.display = 'flex';
     if(menuBtn && clientData) {
         if(clientData.is_active === false) {
             menuBtn.innerHTML = '✅ Activar';
@@ -122,23 +141,28 @@ function clearClientSelection() {
     
     document.getElementById('dashboardContent').style.display='none';
     const dropdown = document.getElementById('clientActionsDropdown');
+    const exportGroup = document.getElementById('clientExportActions');
     if(dropdown) dropdown.style.display = 'none';
+    if(exportGroup) exportGroup.style.display = 'none';
     
     loadGlobalStats();
 }
 
 async function loadClientStats(name){
     try{
-        const month = document.getElementById('globalMonthFilter')?.value || '';
+        const params = getFilterParams();
         let url = `/api/client_stats?client=${encodeURIComponent(name)}`;
-        if(month) url += `&month=${month}`;
+        if(params) url += `&${params}`;
         const r=await fetch(url),d=await r.json();
         const statServices = document.getElementById('statServices');
         if(statServices) statServices.textContent = d.total_services;
         const statActive = document.getElementById('statActive');
         if(statActive) statActive.textContent = d.active;
         const statRevenue = document.getElementById('statRevenue');
-        if(statRevenue) statRevenue.textContent = `$${d.total_revenue.toLocaleString('es-MX',{minimumFractionDigits:2})}`;
+        if(statRevenue) {
+            const revenueWithIva = d.total_revenue * (1 + currentIvaPercent / 100);
+            statRevenue.textContent = `$${revenueWithIva.toLocaleString('es-MX',{minimumFractionDigits:2})}`;
+        }
         const statMinutes = document.getElementById('statMinutes');
         if(statMinutes) statMinutes.textContent = d.total_minutes.toLocaleString();
         renderCharts(d.destinations);
@@ -178,9 +202,9 @@ function renderCharts(destinations){
 
 async function loadClientServices(name){
     try{
-        const month = document.getElementById('globalMonthFilter')?.value || '';
+        const params = getFilterParams();
         let url = `/api/services?client=${encodeURIComponent(name)}`;
-        if(month) url += `&month=${month}`;
+        if(params) url += `&${params}`;
         const r=await fetch(url),d=await r.json();
         allServices=d;renderServicesTable(d);selectedRouteId=null;currentMapFilter='all';updateFilterButtons();renderMexicoMap(document.getElementById('mexicoMap'),d);resetMapZoom();
     }catch(e){console.error(e);}
@@ -525,11 +549,65 @@ async function generateInvoice(){
 }
 // ═══════ NUEVAS FUNCIONES ═══════
 function applyGlobalMonthFilter() {
+    // Clear date range when using month filter
+    document.getElementById('dateFromFilter').value = '';
+    document.getElementById('dateToFilter').value = '';
     loadClients();
     if(currentClient) {
         loadClientStats(currentClient);
         loadClientServices(currentClient);
     }
+}
+
+function applyDateRangeFilter() {
+    const from = document.getElementById('dateFromFilter').value;
+    const to = document.getElementById('dateToFilter').value;
+    if(!from || !to) { showToast('Selecciona ambas fechas (Desde y Hasta)', 'error'); return; }
+    if(from > to) { showToast('La fecha "Desde" debe ser anterior a "Hasta"', 'error'); return; }
+    // Clear month filter when using date range
+    document.getElementById('globalMonthFilter').value = '';
+    loadClients();
+    if(currentClient) {
+        loadClientStats(currentClient);
+        loadClientServices(currentClient);
+    }
+}
+
+function clearDateRangeFilter() {
+    document.getElementById('dateFromFilter').value = '';
+    document.getElementById('dateToFilter').value = '';
+    document.getElementById('globalMonthFilter').value = '';
+    loadClients();
+    if(currentClient) {
+        loadClientStats(currentClient);
+        loadClientServices(currentClient);
+    }
+}
+
+// ═══════ IVA MODAL ═══════
+function openIvaModal() {
+    document.getElementById('ivaPercentInput').value = currentIvaPercent;
+    document.getElementById('ivaModal').classList.add('show');
+}
+function closeIvaModal() {
+    document.getElementById('ivaModal').classList.remove('show');
+}
+function setIvaQuick(val) {
+    document.getElementById('ivaPercentInput').value = val;
+}
+function applyIva() {
+    const val = parseFloat(document.getElementById('ivaPercentInput').value);
+    if(isNaN(val) || val < 0 || val > 100) { showToast('El IVA debe estar entre 0% y 100%', 'error'); return; }
+    currentIvaPercent = val;
+    // Update all IVA labels
+    const ivaLabel = document.getElementById('ivaLabelPercent');
+    if(ivaLabel) ivaLabel.textContent = val;
+    document.querySelectorAll('.iva-label-sync').forEach(el => el.textContent = val);
+    closeIvaModal();
+    // Refresh data to apply new IVA
+    if(currentClient) { loadClientStats(currentClient); }
+    loadGlobalStats();
+    showToast(`IVA actualizado a ${val}%`);
 }
 
 function toggleClientActions() {

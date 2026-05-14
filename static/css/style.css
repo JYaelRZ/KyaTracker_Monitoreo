@@ -189,6 +189,8 @@ body::before {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
 }
 
 .main-header h2 {
@@ -206,6 +208,8 @@ body::before {
 .header-actions {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .btn-icon {
@@ -940,4 +944,92 @@ body::before {
 .dropdown-item.delete:hover {
     background: rgba(239, 68, 68, 0.1);
     color: var(--accent-red);
+}
+
+/* DATE RANGE FILTER */
+.date-range-filter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 6px 12px;
+}
+
+.date-range-input {
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 130px;
+}
+
+.date-range-input:hover, .date-range-input:focus {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.btn-range-filter {
+    padding: 6px 14px !important;
+    font-size: 12px !important;
+    border-radius: 6px !important;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan)) !important;
+    color: white !important;
+    border: none !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-range-filter:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-range-clear {
+    padding: 6px 10px !important;
+    font-size: 14px !important;
+    border-radius: 6px !important;
+    background: transparent !important;
+    color: var(--text-muted) !important;
+    border: 1px solid var(--border-color) !important;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-range-clear:hover {
+    border-color: var(--accent-red) !important;
+    color: var(--accent-red) !important;
+}
+
+/* IVA CARD */
+.iva-card {
+    position: relative;
+    transition: all 0.3s;
+}
+
+.iva-card:hover {
+    border-color: rgba(59, 130, 246, 0.5) !important;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+}
+
+.iva-card::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-cyan);
+    box-shadow: 0 0 8px var(--accent-cyan);
+    animation: pulse-dot 2s infinite;
 }
